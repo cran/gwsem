@@ -22,10 +22,11 @@ unadjusted two-sided normal CDF corresponding to the absolute
 \code{Z} score.
 }
 \examples{
+tdir <- tempdir()
 dir <- system.file("extdata", package = "gwsem")
 pheno <- data.frame(anxiety=rnorm(500))
 m1 <- buildOneItem(pheno, 'anxiety')
 GWAS(m1, file.path(dir,"example.pgen"),
-    file.path(dir,"out.log"))
-loadResults(file.path(dir,"out.log"))
+    file.path(tdir,"out.log"))
+loadResults(file.path(tdir,"out.log"))
 }
