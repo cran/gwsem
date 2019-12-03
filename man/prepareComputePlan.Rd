@@ -8,15 +8,15 @@ prepareComputePlan(model, snpData, out = "out.log", ..., SNP = NULL,
   startFrom = 1L)
 }
 \arguments{
-\item{model}{an instance of \link[OpenMx:MxModel-class]{MxModel}}
+\item{model}{A fully specified \link[OpenMx:MxModel-class]{MxModel} object that can be fit to each SNP.}
 
-\item{snpData}{the name of the file where the SNP data is stored}
+\item{snpData}{A character vector specifying the pathname of a file where the SNP data is stored.}
 
-\item{out}{the filename where the results of fitted models shall be written}
+\item{out}{A character vector containing the pathname where the results of fitted models shall be written.}
 
 \item{...}{Not used.  Forces remaining arguments to be specified by name.}
 
-\item{SNP}{a vector of SNP indices to include in the analysis; NULL is interpreted as all available SNPs}
+\item{SNP}{A vector of SNP indices to include in the analysis (e.g. 101:200 will run SNPs at offsets 101 to 200 counting from the beginning of the file); NULL is interpreted as all available SNPs.}
 
 \item{startFrom}{the index to start from when \code{SNP=NULL}}
 }
@@ -53,6 +53,22 @@ for details). In the case of \sQuote{bed}, an associated
 \href{https://www.cog-genomics.org/plink2/formats#bim}{spec} for
 details). The chromosome, base-pair coordinate, and variant ID are
 added to each line of \code{out}.
+
+The code to implement method='pgen' is based on plink 2.0
+alpha. plink's \sQuote{bed} file format is supported in addition
+to \sQuote{pgen}. Data are coerced appropriately depending on the
+type of the destination column. For a numeric column, data are
+recorded as the values NA, 0, 1, or 2. An ordinal column must have
+exactly 3 levels.
+
+For \code{method='bgen'}, the file \code{path+".bgi"} must also
+exist. If not available, generate this index file with the
+\href{https://bitbucket.org/gavinband/bgen/wiki/bgenix}{bgenix}
+tool.
+
+For \sQuote{bgen} and \sQuote{pgen} formats, the numeric column can be
+populated with a dosage (sum of probabilities multiplied by genotypes)
+if these data are available.
 
 A compute plan does not do anything by itself. You'll need to combine
 the compute plan with a model (such as returned by \link{buildOneFac})

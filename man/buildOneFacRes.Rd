@@ -6,43 +6,50 @@
 \usage{
 buildOneFacRes(phenoData, itemNames, factor = F, res = itemNames,
   covariates = NULL, ..., fitfun = c("WLS", "ML"), minMAF = 0.01,
-  modelType = c("RAM", "LISREL"), gxe = NULL)
+  modelType = c("RAM", "LISREL"), gxe = NULL,
+  exogenousCovariates = NULL)
 }
 \arguments{
-\item{phenoData}{phenotype data with one individual per row}
+\item{phenoData}{A matrix or data.frame which provides all of the phenotype data to the model (both the items and the covariates). Data should be constructed so that variables are on the columns and individuals are on the rows.}
 
-\item{itemNames}{a vector of phenotypic item names that load on the latent factor}
+\item{itemNames}{A vector of phenotypic item names (from phenoData) that load on the latent factor.}
 
-\item{factor}{whether to estimate a regression from the SNP to the latent factor (default FALSE)}
+\item{factor}{A logical expression (\code{FALSE} or \code{TRUE}) indicating whether to estimate a regression pathway from the SNP to the latent factor (default FALSE).}
 
-\item{res}{character vector. Which indicators to estimate a regression to}
+\item{res}{A character vector of phenotypic item names that indicate which specific items the user wishes to regress on the SNP. The default is to regress all of the items on the SNP.}
 
-\item{covariates}{a vector of data column names to use as covariates}
+\item{covariates}{A vector of data column names (from \code{phenoData}) to use as covariates (e.g. age, sex, and ancestry principle components).}
 
 \item{...}{Not used.  Forces remaining arguments to be specified by name.}
 
-\item{fitfun}{the name of the fit function to optimize}
+\item{fitfun}{A character string naming the fit function used to optimize the model. Must be either \sQuote{WLS} or \sQuote{ML}.}
 
-\item{minMAF}{minimum minor allele frequency. Only used when \code{fitfun=WLS}}
+\item{minMAF}{A numerical value that specifies the minimum valid minor allele frequency for a SNP. SNPs with minimum minor allele frequencies that are smaller than the minMAF value will not be analyzed. Only used when \code{fitfun=WLS}}
 
-\item{modelType}{whether to use the RAM or LISREL parameterization}
+\item{modelType}{A character string that determines whether to use the \sQuote{RAM} or \sQuote{LISREL} parameterization for model specification.}
 
 \item{gxe}{a vector of data column names. Creates additional data
 columns named paste0('snp_',columnName) that are the
 product of the SNP and the data in columnName}
+
+\item{exogenousCovariates}{A vector of data column names (from \code{phenoData}) to use as exogenous covariates (e.g. age, sex, and ancestry principle components).}
 }
 \value{
-A \link[OpenMx:MxModel-class]{MxModel}
+\code{buildOneFacRes} returns an \link[OpenMx:MxModel-class]{MxModel} object that can serve as input for the \link{GWAS} function.
 }
 \description{
-Build a model suitable for a single factor residual genome-wide association study
+The \code{buildOneFacRes} function is used to specify a single factor latent variable model where a combination of items as well as the latent variable may be predicted by a genomic variant such as a single nucleotide polymorphism, as well as range of covariates. \figure{resid.jpg}{Single Factor Model with a Focus on Residuals}
 }
 \details{
-You can pass the result of this function to \link{GWAS} to run a GWAS.
+Be aware that a latent variable model is not identified if all of the residuals as well as the latent variable are simultaneously predicted by the SNP.  Specifically, if users wish to use the SNP to predict the latent variable, they much choose at least one (and preferably more that one) item to not be predicted by the SNP.
+
+This function is designed to be passed to the \link{GWAS} function. The model that is returned, however, is a valid OpenMx model and can be fitted using \link[OpenMx]{mxRun} or \link[OpenMx]{mxTryHard}. Models should be tested to ensure that they are identified and fit the data as expected to avoid unnecessary computation of an invalid model.
+
+There is no limit on the number of items that can be included, but more items will exponentially increase computation time.  To address this, we suggest that users use the \sQuote{WLS} fit function. The \sQuote{WLS} fit function is dramatically faster than the \sQuote{ML} fit function, especially for ordinal items.
 
 Ordinal indicator thresholds are setup by
-\link{setupThresholds}. Covariates adjustments are setup by
-\link{setupCovariates}.
+\link{setupThresholds}. Exogenous covariates adjustments are setup by
+\link{setupExogenousCovariates}.
 You can plot the model using \link[OpenMx]{omxGraphviz}.
 }
 \examples{

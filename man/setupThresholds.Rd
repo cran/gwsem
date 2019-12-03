@@ -7,7 +7,7 @@
 setupThresholds(model)
 }
 \arguments{
-\item{model}{an instance of \link[OpenMx:MxModel-class]{MxModel}}
+\item{model}{A fully specified \link[OpenMx:MxModel-class]{MxModel} object that can be fit to each SNP.}
 }
 \value{
 The given \link[OpenMx:MxModel-class]{MxModel} with appropriate thresholds added.

@@ -51,7 +51,7 @@ m2 <- mxModel("lgc", type="RAM",
         mxData(observed=sim1, type="raw", minVariance=0.1, warnNPDacov=FALSE))
 
 ## ------------------------------------------------------------------------
-m2 <- setupCovariates(m2, paste0('pc', 1:5))
+m2 <- setupExogenousCovariates(m2, paste0('pc', 1:5), paste0('t',1:4))
 
 ## ------------------------------------------------------------------------
 tdir <- tempdir()

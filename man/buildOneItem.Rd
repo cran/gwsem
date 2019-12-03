@@ -6,26 +6,28 @@
 \usage{
 buildOneItem(phenoData, depVar, covariates = NULL, ...,
   fitfun = c("WLS", "ML"), minMAF = 0.01, modelType = c("RAM",
-  "LISREL"), gxe = NULL)
+  "LISREL"), gxe = NULL, exogenousCovariates = NULL)
 }
 \arguments{
-\item{phenoData}{phenotype data with one individual per row}
+\item{phenoData}{A matrix or data.frame which provides all of the phenotype data to the model (both the items and the covariates). Data should be constructed so that variables are on the columns and individuals are on the rows.}
 
 \item{depVar}{the name of the single item to predict}
 
-\item{covariates}{a vector of data column names to use as covariates}
+\item{covariates}{A vector of data column names (from \code{phenoData}) to use as covariates (e.g. age, sex, and ancestry principle components).}
 
 \item{...}{Not used.  Forces remaining arguments to be specified by name.}
 
-\item{fitfun}{the name of the fit function to optimize}
+\item{fitfun}{A character string naming the fit function used to optimize the model. Must be either \sQuote{WLS} or \sQuote{ML}.}
 
-\item{minMAF}{minimum minor allele frequency. Only used when \code{fitfun=WLS}}
+\item{minMAF}{A numerical value that specifies the minimum valid minor allele frequency for a SNP. SNPs with minimum minor allele frequencies that are smaller than the minMAF value will not be analyzed. Only used when \code{fitfun=WLS}}
 
-\item{modelType}{whether to use the RAM or LISREL parameterization}
+\item{modelType}{A character string that determines whether to use the \sQuote{RAM} or \sQuote{LISREL} parameterization for model specification.}
 
 \item{gxe}{a vector of data column names. Creates additional data
 columns named paste0('snp_',columnName) that are the
 product of the SNP and the data in columnName}
+
+\item{exogenousCovariates}{A vector of data column names (from \code{phenoData}) to use as exogenous covariates (e.g. age, sex, and ancestry principle components).}
 }
 \value{
 A \link[OpenMx:MxModel-class]{MxModel}
@@ -34,11 +36,13 @@ A \link[OpenMx:MxModel-class]{MxModel}
 Build a model suitable for a single item genome-wide association study
 }
 \details{
-You can pass the result of this function to \link{GWAS} to run a GWAS.
+This function is designed to be passed to the \link{GWAS} function. The model that is returned, however, is a valid OpenMx model and can be fitted using \link[OpenMx]{mxRun} or \link[OpenMx]{mxTryHard}. Models should be tested to ensure that they are identified and fit the data as expected to avoid unnecessary computation of an invalid model.
+
+There is no limit on the number of items that can be included, but more items will exponentially increase computation time.  To address this, we suggest that users use the \sQuote{WLS} fit function. The \sQuote{WLS} fit function is dramatically faster than the \sQuote{ML} fit function, especially for ordinal items.
 
 Ordinal indicator thresholds are setup by
-\link{setupThresholds}. Covariates adjustments are setup by
-\link{setupCovariates}.
+\link{setupThresholds}. Exogenous covariates adjustments are setup by
+\link{setupExogenousCovariates}.
 You can plot the model using \link[OpenMx]{omxGraphviz}.
 }
 \examples{

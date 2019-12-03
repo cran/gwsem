@@ -8,6 +8,7 @@
 #' @param path vector of paths to result files created by \link{GWAS}
 #' @param focus parameter name on which to calculate a Z score and p-value
 #' @param extraColumns character vector of additional columns to load
+#' @param .retainSE logical. Keep a column for the SE of the focus parameter
 #' @template args-dots-barrier
 #' @export
 #' @importFrom data.table fread
@@ -19,8 +20,9 @@
 #' m1 <- buildOneItem(pheno, 'anxiety')
 #' GWAS(m1, file.path(dir,"example.pgen"),
 #'     file.path(tdir,"out.log"))
-#' loadResults(file.path(tdir,"out.log"))
-loadResults <- function(path, focus="snpReg", ..., extraColumns=c()) {
+#' loadResults(file.path(tdir,"out.log"), "snp2anxiety")
+loadResults <- function(path, focus, ..., extraColumns=c(),
+			.retainSE=FALSE) {
   sel <- c('MxComputeLoop1', 'CHR','BP','SNP','statusCode','catch1',
 	   focus,paste0(focus,'SE'), extraColumns)
   got <- list()
@@ -29,7 +31,35 @@ loadResults <- function(path, focus="snpReg", ..., extraColumns=c()) {
 			    sep="\t", check.names=FALSE, quote="", select = sel))
   }
   got$Z <- got[[focus]] / got[[paste0(focus,'SE')]]
-  got[[paste0(focus,'SE')]] <- NULL # redundent; save RAM
+  if (!.retainSE) got[[paste0(focus,'SE')]] <- NULL # redundent; save RAM
   got$P <- 2*pnorm(-abs(got$Z))
+  attr(got, 'focus') <- focus
+  class(got) <- c("gwsemResult", class(got))
   got
+}
+
+#' Creates a Manhattan plot
+#'
+#' Uses the qqman package to create a Manhattan plot.
+#'
+#' @param x the result of \link{loadResults}
+#' @param y an extra argument that should not be used
+#' @param ... arguments forwarded to \link[qqman]{manhattan}
+#' @export
+#' @importFrom qqman manhattan
+#' @return
+#' A Manhattan plot.
+#' @examples
+#' tdir <- tempdir()
+#' dir <- system.file("extdata", package = "gwsem")
+#' pheno <- data.frame(anxiety=rnorm(500))
+#' m1 <- buildOneItem(pheno, 'anxiety')
+#' GWAS(m1, file.path(dir,"example.pgen"),
+#'     file.path(tdir,"out.log"))
+#' got <- loadResults(file.path(tdir,"out.log"), "snp2anxiety")
+#' plot(got)
+plot.gwsemResult <- function(x, y, ...) {
+	if (!missing(y)) stop("plot does not accept a y= argument")
+	x$P[is.na(x$P)] <- 1
+	manhattan(x, ...)
 }

@@ -4,7 +4,7 @@
 \alias{loadResults}
 \title{Load GWAS results into a single data.frame}
 \usage{
-loadResults(path, focus = "snpReg", ..., extraColumns = c())
+loadResults(path, focus, ..., extraColumns = c(), .retainSE = FALSE)
 }
 \arguments{
 \item{path}{vector of paths to result files created by \link{GWAS}}
@@ -14,6 +14,8 @@ loadResults(path, focus = "snpReg", ..., extraColumns = c())
 \item{...}{Not used.  Forces remaining arguments to be specified by name.}
 
 \item{extraColumns}{character vector of additional columns to load}
+
+\item{.retainSE}{logical. Keep a column for the SE of the focus parameter}
 }
 \description{
 Two columns are added, \code{Z} and \code{P}. \code{Z} is the
@@ -28,5 +30,5 @@ pheno <- data.frame(anxiety=rnorm(500))
 m1 <- buildOneItem(pheno, 'anxiety')
 GWAS(m1, file.path(dir,"example.pgen"),
     file.path(tdir,"out.log"))
-loadResults(file.path(tdir,"out.log"))
+loadResults(file.path(tdir,"out.log"), "snp2anxiety")
 }

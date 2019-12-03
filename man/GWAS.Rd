@@ -8,23 +8,29 @@ GWAS(model, snpData, out = "out.log", ..., SNP = NULL,
   startFrom = 1L)
 }
 \arguments{
-\item{model}{an instance of \link[OpenMx:MxModel-class]{MxModel}}
+\item{model}{A fully specified \link[OpenMx:MxModel-class]{MxModel} object that can be fit to each SNP.}
 
-\item{snpData}{the name of the file where the SNP data is stored}
+\item{snpData}{A character vector specifying the pathname of a file where the SNP data is stored.}
 
-\item{out}{the filename where the results of fitted models shall be written}
+\item{out}{A character vector containing the pathname where the results of fitted models shall be written.}
 
 \item{...}{Not used.  Forces remaining arguments to be specified by name.}
 
-\item{SNP}{a vector of SNP indices to include in the analysis; NULL is interpreted as all available SNPs}
+\item{SNP}{A vector of SNP indices to include in the analysis (e.g. 101:200 will run SNPs at offsets 101 to 200 counting from the beginning of the file); NULL is interpreted as all available SNPs.}
 
 \item{startFrom}{the index to start from when \code{SNP=NULL}}
 }
 \value{
-The \link[OpenMx:MxModel-class]{MxModel} returned by \link[OpenMx]{mxRun}.
-Data and estimates for the last SNP processed will be available for inspection.
+The results for each SNP are recorded in the specified log file (\code{out}).
+In addition, data and estimates for the last SNP run are returned
+as an \link[OpenMx:MxModel-class]{MxModel} object
+(similar to the return value of \link[OpenMx]{mxRun}).
+In this way, the last SNP processed is available for close inspection.
 }
 \description{
+The GWAS function is used to run a genome-wide association study based on the specified model. This function is design to take the output from \link{buildOneFac}, \link{buildOneFacRes}, and \link{buildTwoFac} as input, but can also take a similar user specified model. Users should be confident that the models they are running are statistically identified. It is advisable that the users empirically gauge time requirements by running a limited number of SNPs (e.g. 10) to ensure that all SNPs can be fit in a reasonable amount of time.
+}
+\details{
 Adds a compute plan returned by \link{prepareComputePlan} to the
 provided \code{model} and runs it. Once analyses are complete,
 load your aggregated results with \link{loadResults}.
