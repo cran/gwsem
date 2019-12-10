@@ -45,6 +45,18 @@ Ordinal indicator thresholds are setup by
 \link{setupExogenousCovariates}.
 You can plot the model using \link[OpenMx]{omxGraphviz}.
 }
+\section{WLS Technical Note}{
+
+When the \code{depVar} item is continuous, there are no exogenous
+covariates, and the fit function is \code{WLS} then the
+\code{cumulants} method is used to create observed summary
+statistics (see \link[OpenMx]{mxFitFunctionWLS}). In other cases,
+the \code{marginals} method is used. The \code{cumulants} method is
+more accurate than \code{marginals}. The difference in accuracy
+becomes vivid when comparing estimates against the \code{ML} fit
+function.
+}
+
 \examples{
 pheno <- data.frame(anxiety=cut(rnorm(500), c(-Inf, -.5, .5, Inf),
                     ordered_result = TRUE))

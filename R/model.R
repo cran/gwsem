@@ -285,6 +285,9 @@ setupData <- function(phenoData, observed, covariates, exogenousCovariates, gxe,
 
 #' @importFrom stats rbinom
 addPlaceholderSNP <- function(phenoData) {
+	if (!is.null(phenoData[[ 'snp' ]])) {
+		warning("Data already contains placeholder data for the 'snp' column. Ignoring it")
+	}
 	# We use as.numeric because we currently only support dosages.
 	phenoData$snp <- as.numeric(rbinom(dim(phenoData)[1], 2, .5))
 	phenoData
@@ -298,9 +301,11 @@ setupPaths <- function(covariates, depVar)
 		      mxPath(from = "snp", arrows=2, values=1, labels = paste("snp", "res", sep = "_")))
 
 	if (length(covariates)) {
-		paths <- c(paths, list(mxPath(from='one',covariates),
-				       mxPath(from=covariates, arrows=2, values=1),
-				       mxPath(from=covariates, to=depVar)))
+		regLabels <- apply(expand.grid(depVar, covariates)[,c(2,1)], 1, paste0, collapse="2")
+		paths <- c(paths, list(
+			mxPath(from='one',covariates,labels=paste0(covariates,"_mean")),
+			mxPath(from=covariates, arrows=2, values=1, labels=paste0(covariates,"_var")),
+			mxPath(from=covariates, to=depVar, connect="all.pairs", labels=regLabels)))
 	}
 	paths
 }
@@ -308,6 +313,16 @@ setupPaths <- function(covariates, depVar)
 #' Build a model suitable for a single item genome-wide association study
 #'
 #' @template detail-build
+#' 
+#' @section WLS Technical Note:
+#' When the \code{depVar} item is continuous, there are no exogenous
+#' covariates, and the fit function is \code{WLS} then the
+#' \code{cumulants} method is used to create observed summary
+#' statistics (see \link[OpenMx]{mxFitFunctionWLS}). In other cases,
+#' the \code{marginals} method is used. The \code{cumulants} method is
+#' more accurate than \code{marginals}. The difference in accuracy
+#' becomes vivid when comparing estimates against the \code{ML} fit
+#' function.
 #'
 #' @template args-phenoData
 #' @param depVar the name of the single item to predict
@@ -337,9 +352,11 @@ buildOneItem <- function(phenoData, depVar, covariates=NULL, ..., fitfun = c("WL
     stop(paste("buildOneItem provided with", length(depVar), "dependent variables",
 	       "instead of 1. Did you intend to use buildOneFac instead?"))
   }
+  phenoData <- addPlaceholderSNP(phenoData)
+  # Remove extraneous factor columns that could prevent WLS cumulants
+  phenoData <- phenoData[,c('snp', depVar, covariates, exogenousCovariates)]
   fac <- is.factor(phenoData[[depVar]])
 
-  phenoData <- addPlaceholderSNP(phenoData)
   paths <- setupPaths(covariates, depVar)
   paths <- c(paths,
 	     mxPath(from = c(depVar), arrows=2, values=1, free = !fac, labels = paste(c(depVar), "res", sep = "_")),
@@ -349,13 +366,20 @@ buildOneItem <- function(phenoData, depVar, covariates=NULL, ..., fitfun = c("WL
   dat       <- setupData(phenoData, manifest, covariates, exogenousCovariates, gxe, force(!missing(minMAF)), minMAF, fitfun)
 
   modelName <- "OneItem"
-  oneFacPre <- mxModel(model=modelName, type=modelType,
+  model <- mxModel(model=modelName, type=modelType,
                        manifestVars = manifest,
                        latentVars = c(exogenousCovariates),
                        paths, dat, makeFitFunction(fitfun))
 
-  oneFacPre <- setupThresholds(oneFacPre)
-  setupExogenousCovariates(oneFacPre, exogenousCovariates, depVar)
+  if (!fac && length(exogenousCovariates) == 0 && fitfun == 'WLS') {
+	  # cumulants is substantially more precise than marginals
+	  model <- mxModel(model, 'M', remove = TRUE)
+	  model$expectation$M <- as.character(NA)
+	  model$fitfunction$continuousType <- 'cumulants'
+  }
+
+  model <- setupThresholds(model)
+  setupExogenousCovariates(model, exogenousCovariates, depVar)
 }
 
 #' Build a model suitable for a single factor genome-wide association study
@@ -523,8 +547,8 @@ buildTwoFac <- function(phenoData, F1itemNames, F2itemNames, covariates = NULL, 
   latents   <- c("F1", "F2")
   paths <- setupPaths(covariates, latents)
   paths <- c(paths,
-	     mxPath(from="F1", to=F1itemNames,values=1, labels = paste("lambda", F1itemNames, sep = "_")  ),
-	     mxPath(from="F2", to=F2itemNames,values=1, labels = paste("lambda", F2itemNames, sep = "_")  ),
+	     mxPath(from="F1", to=F1itemNames,values=1, labels = paste("F1_lambda", F1itemNames, sep = "_")  ),
+	     mxPath(from="F2", to=F2itemNames,values=1, labels = paste("F2_lambda", F2itemNames, sep = "_")  ),
 	     mxPath(from="F1", to= "F2", arrows=2,free=T, values=.3),
 	     mxPath(from = itemNames, arrows=2, values=1, free = c(fac==0),
 		    labels = paste(c(itemNames), "res", sep = "_")),
