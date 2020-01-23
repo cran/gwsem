@@ -4,10 +4,19 @@
 \alias{buildOneFacRes}
 \title{Build a model suitable for a single factor residual genome-wide association study}
 \usage{
-buildOneFacRes(phenoData, itemNames, factor = F, res = itemNames,
-  covariates = NULL, ..., fitfun = c("WLS", "ML"), minMAF = 0.01,
-  modelType = c("RAM", "LISREL"), gxe = NULL,
-  exogenousCovariates = NULL)
+buildOneFacRes(
+  phenoData,
+  itemNames,
+  factor = F,
+  res = itemNames,
+  covariates = NULL,
+  ...,
+  fitfun = c("WLS", "ML"),
+  minMAF = 0.01,
+  modelType = c("RAM", "LISREL"),
+  gxe = NULL,
+  exogenous = NA
+)
 }
 \arguments{
 \item{phenoData}{A matrix or data.frame which provides all of the phenotype data to the model (both the items and the covariates). Data should be constructed so that variables are on the columns and individuals are on the rows.}
@@ -32,7 +41,7 @@ buildOneFacRes(phenoData, itemNames, factor = F, res = itemNames,
 columns named paste0('snp_',columnName) that are the
 product of the SNP and the data in columnName}
 
-\item{exogenousCovariates}{A vector of data column names (from \code{phenoData}) to use as exogenous covariates (e.g. age, sex, and ancestry principle components).}
+\item{exogenous}{logical value. Whether the covariates should be treated as exogenous (TRUE) or endogenous (FALSE).}
 }
 \value{
 \code{buildOneFacRes} returns an \link[OpenMx:MxModel-class]{MxModel} object that can serve as input for the \link{GWAS} function.
@@ -59,7 +68,9 @@ pheno <- as.data.frame(pheno)
 buildOneFacRes(pheno, colnames(pheno))
 }
 \seealso{
-Other model builder: \code{\link{buildOneFac}},
-  \code{\link{buildOneItem}}, \code{\link{buildTwoFac}}
+Other model builder: 
+\code{\link{buildItem}()},
+\code{\link{buildOneFac}()},
+\code{\link{buildTwoFac}()}
 }
 \concept{model builder}

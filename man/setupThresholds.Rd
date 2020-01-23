@@ -34,7 +34,7 @@ model building functions.
 \examples{
 pheno <- data.frame(anxiety=cut(rnorm(500), c(-Inf, -.5, .5, Inf),
                     ordered_result = TRUE))
-m1 <- buildOneItem(pheno, 'anxiety')
+m1 <- buildItem(pheno, 'anxiety')
 m1 <- setupThresholds(m1)
 m1$Thresholds
 }

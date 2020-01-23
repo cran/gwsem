@@ -4,9 +4,18 @@
 \alias{buildTwoFac}
 \title{Build a model suitable for a two factor genome-wide association study}
 \usage{
-buildTwoFac(phenoData, F1itemNames, F2itemNames, covariates = NULL, ...,
-  fitfun = c("WLS", "ML"), minMAF = 0.01, modelType = c("RAM",
-  "LISREL"), gxe = NULL, exogenousCovariates = NULL)
+buildTwoFac(
+  phenoData,
+  F1itemNames,
+  F2itemNames,
+  covariates = NULL,
+  ...,
+  fitfun = c("WLS", "ML"),
+  minMAF = 0.01,
+  modelType = c("RAM", "LISREL"),
+  gxe = NULL,
+  exogenous = NA
+)
 }
 \arguments{
 \item{phenoData}{A matrix or data.frame which provides all of the phenotype data to the model (both the items and the covariates). Data should be constructed so that variables are on the columns and individuals are on the rows.}
@@ -29,7 +38,7 @@ buildTwoFac(phenoData, F1itemNames, F2itemNames, covariates = NULL, ...,
 columns named paste0('snp_',columnName) that are the
 product of the SNP and the data in columnName}
 
-\item{exogenousCovariates}{A vector of data column names (from \code{phenoData}) to use as exogenous covariates (e.g. age, sex, and ancestry principle components).}
+\item{exogenous}{logical value. Whether the covariates should be treated as exogenous (TRUE) or endogenous (FALSE).}
 }
 \value{
 \code{buildTwoFac} returns an \link[OpenMx:MxModel-class]{MxModel} object that can serve as input for the \link{GWAS} function.
@@ -54,7 +63,9 @@ pheno <- as.data.frame(pheno)
 buildTwoFac(pheno, paste0('i',1:6), paste0('i',5:10))
 }
 \seealso{
-Other model builder: \code{\link{buildOneFacRes}},
-  \code{\link{buildOneFac}}, \code{\link{buildOneItem}}
+Other model builder: 
+\code{\link{buildItem}()},
+\code{\link{buildOneFacRes}()},
+\code{\link{buildOneFac}()}
 }
 \concept{model builder}

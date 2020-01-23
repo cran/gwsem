@@ -45,6 +45,7 @@ model building functions.
 }
 \examples{
 m1 <- mxModel("test", type="RAM",
-             latentVars = "sex", manifestVars = "anxiety")
+             latentVars = "sex", manifestVars = "anxiety",
+             mxData(data.frame(sex=rbinom(10,1,.5)), 'raw'))
 m1 <- setupExogenousCovariates(m1, 'sex', 'anxiety')
 }

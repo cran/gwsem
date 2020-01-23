@@ -18,6 +18,9 @@ loadResults(path, focus, ..., extraColumns = c(), .retainSE = FALSE)
 \item{.retainSE}{logical. Keep a column for the SE of the focus parameter}
 }
 \description{
+A1 is the reference allele and A2 is the alternate allele.
+}
+\details{
 Two columns are added, \code{Z} and \code{P}. \code{Z} is the
 focal parameter divded by its standard error. \code{P} is the
 unadjusted two-sided normal CDF corresponding to the absolute
@@ -27,7 +30,7 @@ unadjusted two-sided normal CDF corresponding to the absolute
 tdir <- tempdir()
 dir <- system.file("extdata", package = "gwsem")
 pheno <- data.frame(anxiety=rnorm(500))
-m1 <- buildOneItem(pheno, 'anxiety')
+m1 <- buildItem(pheno, 'anxiety')
 GWAS(m1, file.path(dir,"example.pgen"),
     file.path(tdir,"out.log"))
 loadResults(file.path(tdir,"out.log"), "snp2anxiety")

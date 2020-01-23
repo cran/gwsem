@@ -4,8 +4,14 @@
 \alias{prepareComputePlan}
 \title{Return a suitable compute plan for a genome-wide association study}
 \usage{
-prepareComputePlan(model, snpData, out = "out.log", ..., SNP = NULL,
-  startFrom = 1L)
+prepareComputePlan(
+  model,
+  snpData,
+  out = "out.log",
+  ...,
+  SNP = NULL,
+  startFrom = 1L
+)
 }
 \arguments{
 \item{model}{A fully specified \link[OpenMx:MxModel-class]{MxModel} object that can be fit to each SNP.}

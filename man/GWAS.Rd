@@ -4,8 +4,7 @@
 \alias{GWAS}
 \title{Run a genome-wide association study (GWAS) using the provided model}
 \usage{
-GWAS(model, snpData, out = "out.log", ..., SNP = NULL,
-  startFrom = 1L)
+GWAS(model, snpData, out = "out.log", ..., SNP = NULL, startFrom = 1L)
 }
 \arguments{
 \item{model}{A fully specified \link[OpenMx:MxModel-class]{MxModel} object that can be fit to each SNP.}
@@ -38,7 +37,7 @@ load your aggregated results with \link{loadResults}.
 \examples{
 dir <- system.file("extdata", package = "gwsem")
 pheno <- data.frame(anxiety=rnorm(500))
-m1 <- buildOneItem(pheno, 'anxiety')
+m1 <- buildItem(pheno, 'anxiety')
 GWAS(m1, file.path(dir,"example.pgen"),
      file.path(tempdir(),"out.log"))
 }

@@ -23,7 +23,7 @@ Uses the qqman package to create a Manhattan plot.
 tdir <- tempdir()
 dir <- system.file("extdata", package = "gwsem")
 pheno <- data.frame(anxiety=rnorm(500))
-m1 <- buildOneItem(pheno, 'anxiety')
+m1 <- buildItem(pheno, 'anxiety')
 GWAS(m1, file.path(dir,"example.pgen"),
     file.path(tdir,"out.log"))
 got <- loadResults(file.path(tdir,"out.log"), "snp2anxiety")

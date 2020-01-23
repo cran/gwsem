@@ -29,10 +29,12 @@ pheno$i2 <- cut(pheno$i2, c(-Inf, quantile(pheno$i2, .5), Inf), ordered_result =
 
 # -----------------
 
-expect_error(buildOneItem(pheno, paste0("i", 1:5)),
-             "buildOneItem provided with 5 dependent")
+oi <- buildOneItem(pheno, paste0("i", 3), exogenous = TRUE)
+expect_equivalent(oi$M$labels[1,'snp'], "data.snp")
 
-oi <- buildOneItem(pheno, paste0("i", 3))
+oi <- buildItem(pheno, paste0("i", 3))
+expect_true(is.null(oi$M))
+expect_true(oi$A$free['i3', 'snp'])
 expect_error(GWAS(oi, "example"),
              "rename snpData")
 
@@ -44,32 +46,52 @@ expect_error(GWAS(oi, something_else=1),
 
 got6 <- GWAS(oi,
      file.path(dir,"example.pgen"),
-     file.path(tdir, "out.log"), SNP=c(3:4,6))
-is.null(got6$data$observedStats$means)
+     file.path(tdir, "out.log"), SNP=c(3:5))
+expect_true(is.null(got6$data$observedStats$means))
 
 pgen <- loadResults(file.path(tdir, "out.log"), "snp2i3")
 rx <- which(min(pgen$P) == pgen$P)
-expect_equal(rx, 1)
-expect_equal(pgen$P[rx], .515, tolerance=1e-2)
+expect_equal(rx, 3)
+expect_equal(pgen$P[rx], .155, tolerance=1e-2)
 
 expect_error(GWAS(oi,
                   file.path(dir,"example.pgen"),
                   file.path(tdir, "out.log"), SNP=c(250)),
              "out of data")
 
-oi <- expect_warning(buildOneItem(pheno, paste0("i", 3), fitfun = "ML",
+oi <- expect_warning(buildItem(pheno, paste0("i", 3), fitfun = "ML",
                    minMAF=.1),
                    "minMAF is ignored when fitfun")
+expect_true(!is.null(oi$M))
 
 GWAS(oi,
      file.path(dir,"example.pgen"),
-     file.path(tdir, "out.log"), SNP=c(3:4,6))
+     file.path(tdir, "out.log"), SNP=c(3:5))
 
 ml <- loadResults(file.path(tdir, "out.log"), "snp2i3")
 expect_equal(cor(ml$P, pgen$P), 1, tolerance=1e-3)
 
-expect_error(buildOneItem(pheno, paste0("i", 1), fitfun = "bob"),
+expect_error(buildItem(pheno, paste0("i", 1), fitfun = "bob"),
              "should be one of")
+
+# -----------------
+
+oi <- buildItem(pheno, paste0("i", 2:3))
+expect_true(oi$S$free['i2','i3'])
+
+GWAS(oi,
+     file.path(dir,"example.pgen"),
+     file.path(tdir, "out.log"), SNP=c(11:20))
+
+pgen <- loadResults(file.path(tdir, "out.log"), "snp2i2")
+rx <- which(min(pgen$P) == pgen$P)
+expect_equal(rx, 10)
+expect_equal(pgen$P[rx], .0251, tolerance=1e-2)
+
+pgen <- loadResults(file.path(tdir, "out.log"), "snp2i3")
+rx <- which(min(pgen$P) == pgen$P)
+expect_equal(rx, 4)
+expect_equal(pgen$P[rx], .086, tolerance=1e-2)
 
 # -----------------
 
@@ -79,14 +101,14 @@ if (.Platform$OS.type == "windows" && packageVersion("data.table") <= '1.12.2') 
 
 z1 = GWAS(buildOneFac(pheno, paste0("i", 1:numIndicators)),
      file.path(dir,"example.pgen"),
-     file.path(tdir, "out.log"), SNP=c(3:4,6))
+     file.path(tdir, "out.log"), SNP=c(3:5))
 
 pgen <- loadResults(file.path(tdir, "out.log"), "snp2F")
 pgen2 <- loadResults(rep(file.path(tdir, "out.log"), 2), 'snp2F')
 
-expect_equal(pgen$SNP, paste0("RSID_", c(4,5,7)))
-expect_equal(pgen2$SNP, rep(paste0("RSID_", c(4,5,7)), 2))
-expect_equal(pgen$snp2F, c(-.188, -.066, .006), tolerance=.001)
+expect_equal(pgen$SNP, paste0("RSID_", 4:6))
+expect_equal(pgen2$SNP, rep(paste0("RSID_", 4:6), 2))
+expect_equal(pgen$snp2F, c(.188, .066, -.081), tolerance=.001)
 
 pgen <- read.table(file.path(tdir, "out.log"), stringsAsFactors = FALSE, header=TRUE,
                    sep="\t", check.names=FALSE, quote="", comment.char="")
@@ -101,9 +123,14 @@ if(0) {
 
 # -----------------
 
-GWAS(buildOneFacRes(pheno, paste0("i", 1:numIndicators)),
+m1 <- buildOneFacRes(pheno, paste0("i", 1:numIndicators), factor=TRUE)
+expect_true(m1$A$free['F','snp'])
+
+m2 <- buildOneFacRes(pheno, paste0("i", 1:numIndicators))
+m2 <- GWAS(m2,
      file.path(dir,"example.pgen"),
-     file.path(tdir, "out.log"), SNP=c(3:4,6))
+     file.path(tdir, "out.log"), SNP=c(3:5))
+expect_false(m2$A$free['F','snp'])
 
 pgen <- read.table(file.path(tdir, "out.log"), stringsAsFactors = FALSE, header=TRUE,
                    sep="\t", check.names=FALSE, quote="", comment.char="")
@@ -114,14 +141,14 @@ l2 <- pgen[,paste0('lambda_i',1:7)]
 expect_equivalent(colMeans(l2) / loadings, rep(1, numIndicators), tolerance=.2)
 
 pgen <- loadResults(file.path(tdir, "out.log"), "snp2i2")
-expect_equal(pgen$P, rep(1,3), tolerance=1e-5)
+expect_equal(pgen$P, c(0.481, 0.896, 0.412), tolerance=1e-2)
 
 # -----------------
 
 GWAS(buildTwoFac(pheno, F1itemNames = paste0("i",1:4),
                  F2itemNames = paste0("i",4:7)),
      file.path(dir,"example.pgen"),
-     file.path(tdir, "out.log"), SNP=c(3,4,6))
+     file.path(tdir, "out.log"), SNP=3:5)
 
 pgen <- read.table(file.path(tdir, "out.log"), stringsAsFactors = FALSE, header=TRUE,
                    sep="\t", check.names=FALSE, quote="", comment.char="")
@@ -132,7 +159,7 @@ expect_equal(pgen[['TwoFac.S[9,10]']], rep(1.17,3), .02)
 
 # ------------
 
-for (f in c("buildOneFac", "buildOneFacRes", "buildOneItem",
+for (f in c("buildOneFac", "buildOneFacRes", "buildItem",
                "buildTwoFac")) {
   expect_error(do.call(f, args=list(pheno, another.arg="xyz")),
                "Rejected are any values")
