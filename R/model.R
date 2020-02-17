@@ -9,6 +9,7 @@ calcMinVar <- function(minMAF) 2*minMAF*(1-minMAF)
 
 #' Return a suitable compute plan for a genome-wide association study
 #'
+#' \lifecycle{maturing}
 #' Instead of using OpenMx's default model processing sequence (i.e.,
 #' \link[OpenMx]{omxDefaultComputePlan}), it is more efficient and
 #' convienient to assemble a compute plan tailored for a genome-wide
@@ -126,13 +127,15 @@ prepareComputePlan <- function(model, snpData, out="out.log", ...,
   onesnp <- c(
     onesnp,
     TC=mxComputeTryCatch(mxComputeSequence(opt)),
-    CK=mxComputeCheckpoint(path=out, standardErrors = TRUE))
+    CK=mxComputeCheckpoint(path=out, standardErrors = TRUE,
+                           vcov = length(model$data$algebra) > 0))
 
   mxModel(model, mxComputeLoop(onesnp, i=SNP, startFrom=startFrom))
 }
 
 #' Run a genome-wide association study (GWAS) using the provided model
 #'
+#' \lifecycle{maturing}
 #' The GWAS function is used to run a genome-wide association study based on the specified model. This function is design to take the output from \link{buildOneFac}, \link{buildOneFacRes}, and \link{buildTwoFac} as input, but can also take a similar user specified model. Users should be confident that the models they are running are statistically identified. It is advisable that the users empirically gauge time requirements by running a limited number of SNPs (e.g. 10) to ensure that all SNPs can be fit in a reasonable amount of time.
 #' 
 #' Adds a compute plan returned by \link{prepareComputePlan} to the
@@ -171,6 +174,7 @@ GWAS <- function(model, snpData, out="out.log", ..., SNP=NULL, startFrom=1L)
 
 #' Set up thresholds for ordinal indicators
 #'
+#' \lifecycle{experimental}
 #' Ordinal indicator thresholds are freely estimated with fixed means
 #' and variance. This function adds thresholds to the given
 #' \code{model}.  If no indicators are ordinal, the given \code{model}
@@ -220,6 +224,7 @@ setupThresholds <- function(model)
 
 #' Set up exogenous model covariates
 #'
+#' \lifecycle{experimental}
 #' In GWAS, including a number of the first principle components as
 #' covariates helps reduce false positives caused by population
 #' stratification. This function adds paths from covariates to
@@ -292,7 +297,7 @@ setupData <- function(phenoData, gxe, customMinMAF, minMAF, fitfun)
 #' @importFrom stats rbinom
 addPlaceholderSNP <- function(phenoData) {
 	if (!is.null(phenoData[[ 'snp' ]])) {
-		warning("Data already contains placeholder data for the 'snp' column. This is unnecessary and not recommended")
+		warning("Data already contains placeholder data for the 'snp' column. This is okay for testing, but generally not recommended")
 	} else {
 		# We use as.numeric because we currently only support dosages.
 		phenoData$snp <- as.numeric(rbinom(dim(phenoData)[1], 2, .5))
@@ -357,6 +362,7 @@ postprocessModel <- function(model, indicators, exogenous)
 
 #' Build a model suitable for a single item genome-wide association study
 #'
+#' \lifecycle{maturing}
 #' @template detail-build
 #' 
 #' @section WLS Technical Note:
@@ -433,10 +439,18 @@ buildItem <- function(phenoData, depVar, covariates=NULL, ..., fitfun = c("WLS",
 }
 
 #' @export
-buildOneItem <- buildItem
+#' @importFrom lifecycle deprecate_warn
+buildOneItem <- function(phenoData, depVar, covariates=NULL, ..., fitfun = c("WLS","ML"),
+                         minMAF=0.01, gxe=NULL, exogenous=NA)
+{
+  deprecate_warn("0.1.14", "buildOneItem()", "buildItem()")
+  buildItem(phenoData, depVar, covariates, fitfun=fitfun,
+            minMAF=minMAF, gxe=gxe, exogenous=exogenous)
+}
 
 #' Build a model suitable for a single factor genome-wide association study
 #'
+#' \lifecycle{maturing}
 #' The \code{buildOneFac} function is used to specify a single factor latent variable model where the latent variable is predicted by a genomic variant such as a single nucleotide polymorphism, as well as range of covariates. \figure{singleFactor.jpg}{Single Factor Model}
 #'
 #' @template detail-build
@@ -503,6 +517,7 @@ buildOneFac <- function(phenoData, itemNames, covariates=NULL, ..., fitfun = c("
 
 #' Build a model suitable for a single factor residual genome-wide association study
 #'
+#' \lifecycle{maturing}
 #' The \code{buildOneFacRes} function is used to specify a single factor latent variable model where a combination of items as well as the latent variable may be predicted by a genomic variant such as a single nucleotide polymorphism, as well as range of covariates. \figure{resid.jpg}{Single Factor Model with a Focus on Residuals}
 #'
 #' Be aware that a latent variable model is not identified if all of the residuals as well as the latent variable are simultaneously predicted by the SNP.  Specifically, if users wish to use the SNP to predict the latent variable, they much choose at least one (and preferably more that one) item to not be predicted by the SNP.
@@ -577,6 +592,7 @@ buildOneFacRes <- function(phenoData, itemNames, factor = F, res = itemNames, co
 
 #' Build a model suitable for a two factor genome-wide association study
 #'
+#' \lifecycle{maturing}
 #' The buildTwoFac function is used to specify a model with two latent variables where each latent variable is simultaneously predicted by a genomic variant such as a single nucleotide polymorphism, as well as range of covariates. The model allows the latent variables to correlate to accomodate comorbidity between latent traits. \figure{twoFactor.jpg}{Two Factor Model}
 #'
 #' @template detail-build

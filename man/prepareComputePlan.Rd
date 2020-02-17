@@ -30,6 +30,7 @@ prepareComputePlan(
 The given model with an appropriate compute plan.
 }
 \description{
+\lifecycle{maturing}
 Instead of using OpenMx's default model processing sequence (i.e.,
 \link[OpenMx]{omxDefaultComputePlan}), it is more efficient and
 convienient to assemble a compute plan tailored for a genome-wide

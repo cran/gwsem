@@ -15,6 +15,7 @@ isSuspicious(got, pars)
 a vector of logicals for each row of \code{got} indicating suspicion (if TRUE)
 }
 \description{
+\lifecycle{maturing}
 The \link{GWAS} function writes all results, both valid and
 invalid, to a log file. This function uses heuristics to try to
 classify rows as suspicious or unsuspicious.  The

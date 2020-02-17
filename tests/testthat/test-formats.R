@@ -24,7 +24,7 @@ pheno <- cbind(pheno, indicators)
 m1 <- GWAS(buildOneFac(pheno, paste0("i", 1:numIndicators)),
            file.path(dir,"example.pgen"),
            file.path(tdir, "out.log"))
-rawSNP <- m1$data$observed$snp
+rawSNP <- m1$data$observed
 pgen <- read.table(file.path(tdir, "out.log"), stringsAsFactors = FALSE, header=TRUE,
                      sep="\t", check.names=FALSE, quote="", comment.char="")
 expect_equal(nrow(pgen), 199)
@@ -35,9 +35,12 @@ m1 <- GWAS(buildOneFac(pheno, paste0("i", 1:numIndicators)),
      file.path(dir,"example.bed"),
      file.path(tdir, "out.log"))
 # bed can't store dosages so we get ordinal values with some NAs
-mask <- !is.na(m1$data$observed$snp)
-expect_equal(m1$data$observed$snp[mask] - rawSNP[mask],
-             rep(0, sum(mask)), .1)
+test_that("bed SNP data", {
+  skip_if_not_installed("OpenMx", "2.16.0.1")
+  mask <- rawSNP$FID %in% m1$data$observed$FID
+  expect_equal(m1$data$observed$snp - rawSNP[mask,'snp'],
+               rep(0, sum(mask)), .1)
+})
 bed <- read.table(file.path(tdir, "out.log"), stringsAsFactors = FALSE, header=TRUE,
                    sep="\t", check.names=FALSE, quote="", comment.char="")
 expect_equal(nrow(bed), 199)
@@ -50,7 +53,7 @@ expect_equal(range(m1$data$observed$snp, na.rm = TRUE), c(0,2), .01)
 m1 <- GWAS(buildOneFac(pheno, paste0("i", 1:numIndicators)),
      file.path(dir,"example.bgen"),
      file.path(tdir, "out.log"))
-expect_equal(rawSNP, m1$data$observed$snp, tolerance=5e-5)
+expect_equal(rawSNP$snp, m1$data$observed$snp, tolerance=5e-5)
 bgen <- read.table(file.path(tdir, "out.log"), stringsAsFactors = FALSE, header=TRUE,
                   sep="\t", check.names=FALSE, quote="", comment.char="")
 expect_equal(nrow(bgen), 199)
@@ -75,19 +78,6 @@ lr <- loadResults(file.path(tdir, "out.log"), "snp_to_F", signAdj='lambda_i1')
 expect_equal(colnames(lr), c("MxComputeLoop1", "CHR", "BP", "SNP", "A1", "A2",
                              "statusCode", "catch1", "snp_to_F", "Z", "P"))
 
-# -----
-# These are the same SNP after permutation:
-
-m3 <- GWAS(buildOneFac(pheno, paste0("i", 1:numIndicators)),
-           file.path(dir,"example.pgen"),
-           file.path(tdir, "out.log"), SNP=1)
-expect_true(is.na(m3$data$observed$snp[1]))
-
-m3 <- GWAS(buildOneFac(pheno, paste0("i", 1:numIndicators)),
-           file.path(dir,"example.bgen"),
-           file.path(tdir, "out.log"), SNP=2)
-expect_true(is.na(m3$data$observed$snp[1]))
-
 # ------------------
 
 expect_equal(pgen$A1, bgen$A1)
@@ -96,14 +86,14 @@ expect_equal(pgen$A2, bgen$A2)
 expect_equal(pgen$A2, bed$A2)
 
 # should not match exactly because bed can't store dosages
-expect_equal(sum(abs(pgen$MAF - bed$MAF)), 1.447, .01)
+expect_equal(sum(abs(pgen$MAF - bed$MAF)), 1.447, .02)
 expect_equal(pgen$MAF, bed$MAF, .06)
 
 expect_equal(match(pgen$SNP, bed$SNP), 1:199)  # same order
 
 bgen <- bgen[match(pgen$SNP, sub("^SNP","RS",bgen[['SNP']])),]
 
-expect_equal(bgen$MAF, pgen$MAF, 1e-4)
+expect_equal(bgen$MAF, pgen$MAF, 1e-2)
 
 mask <- (bgen$catch1=="" & pgen$catch1 == "" &
            bgen$statusCode=="OK" & pgen$statusCode=="OK")

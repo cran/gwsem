@@ -41,6 +41,7 @@ product of the SNP and the data in columnName}
 \code{buildTwoFac} returns an \link[OpenMx:MxModel-class]{MxModel} object that can serve as input for the \link{GWAS} function.
 }
 \description{
+\lifecycle{maturing}
 The buildTwoFac function is used to specify a model with two latent variables where each latent variable is simultaneously predicted by a genomic variant such as a single nucleotide polymorphism, as well as range of covariates. The model allows the latent variables to correlate to accomodate comorbidity between latent traits. \figure{twoFactor.jpg}{Two Factor Model}
 }
 \details{

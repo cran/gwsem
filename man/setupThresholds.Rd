@@ -13,6 +13,7 @@ setupThresholds(model)
 The given \link[OpenMx:MxModel-class]{MxModel} with appropriate thresholds added.
 }
 \description{
+\lifecycle{experimental}
 Ordinal indicator thresholds are freely estimated with fixed means
 and variance. This function adds thresholds to the given
 \code{model}.  If no indicators are ordinal, the given \code{model}

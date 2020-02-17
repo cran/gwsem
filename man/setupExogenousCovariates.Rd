@@ -18,6 +18,7 @@ The given \link[OpenMx:MxModel-class]{MxModel} with paths
 added from covariates to manifest indicators.
 }
 \description{
+\lifecycle{experimental}
 In GWAS, including a number of the first principle components as
 covariates helps reduce false positives caused by population
 stratification. This function adds paths from covariates to

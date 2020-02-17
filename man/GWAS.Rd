@@ -27,6 +27,7 @@ as an \link[OpenMx:MxModel-class]{MxModel} object
 In this way, the last SNP processed is available for close inspection.
 }
 \description{
+\lifecycle{maturing}
 The GWAS function is used to run a genome-wide association study based on the specified model. This function is design to take the output from \link{buildOneFac}, \link{buildOneFacRes}, and \link{buildTwoFac} as input, but can also take a similar user specified model. Users should be confident that the models they are running are statistically identified. It is advisable that the users empirically gauge time requirements by running a limited number of SNPs (e.g. 10) to ensure that all SNPs can be fit in a reasonable amount of time.
 }
 \details{

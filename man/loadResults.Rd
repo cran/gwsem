@@ -27,6 +27,7 @@ loadResults(
 \item{signAdj}{name of column. Value of focus parameter is multiplied by the sign of the named column}
 }
 \description{
+\lifecycle{maturing}
 The \code{signAdj} column is important and not optional for latent
 factor models.  Loadings to factor indicators can take any sign. If
 your focus is the regression from the SNP to the factor then this

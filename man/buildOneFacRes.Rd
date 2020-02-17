@@ -44,6 +44,7 @@ product of the SNP and the data in columnName}
 \code{buildOneFacRes} returns an \link[OpenMx:MxModel-class]{MxModel} object that can serve as input for the \link{GWAS} function.
 }
 \description{
+\lifecycle{maturing}
 The \code{buildOneFacRes} function is used to specify a single factor latent variable model where a combination of items as well as the latent variable may be predicted by a genomic variant such as a single nucleotide polymorphism, as well as range of covariates. \figure{resid.jpg}{Single Factor Model with a Focus on Residuals}
 }
 \details{

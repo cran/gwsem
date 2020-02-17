@@ -18,6 +18,7 @@ loadSuspicious(path, focus, ..., extraColumns = c(), signAdj = NULL)
 \item{signAdj}{name of column. Value of focus parameter is multiplied by the sign of the named column}
 }
 \description{
+\lifecycle{maturing}
 These rows are excluded by \link{loadResults}.
 }
 \examples{

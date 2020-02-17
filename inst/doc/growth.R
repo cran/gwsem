@@ -1,13 +1,13 @@
-## ---- include = FALSE----------------------------------------------------
+## ---- include = FALSE---------------------------------------------------------
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
 
-## ----setup, message=FALSE------------------------------------------------
+## ----setup, message=FALSE-----------------------------------------------------
 library(gwsem)  # load gwsem
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 manifests<-c("t1","t2","t3","t4","snp")
 latents<-c("int","slope")
 path <- list(mxPath(from="int",to=c("t1","t2","t3","t4"), free=c(FALSE,FALSE,FALSE,FALSE), value=c(1.0,1.0,1.0,1.0) , arrows=1, label=c("int__t1","int__t2","int__t3","int__t4") ),
@@ -28,20 +28,20 @@ model <- mxModel("lgc",
                  latentVars = latents,
                  path)
 
-## ---- results='hidden', echo=FALSE---------------------------------------
+## ---- results='hidden', echo=FALSE--------------------------------------------
 fam <- read.table(file.path(system.file("extdata", package = "gwsem"), "example.fam"))
 N <- nrow(fam)
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 sim1 <- mxGenerateData(model, N)
 head(sim1)
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 for (ii in 1:5) {
   sim1[[paste0('pc', ii)]] <- rnorm(N)
 }
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 m2 <- mxModel("lgc", type="RAM",
         manifestVars = model$manifestVars,
         latentVars = c(model$latentVars, paste0('pc', 1:5)),
@@ -50,26 +50,24 @@ m2 <- mxModel("lgc", type="RAM",
         mxFitFunctionWLS(allContinuousMethod="marginals"),
         mxData(observed=sim1, type="raw", minVariance=0.1, warnNPDacov=FALSE))
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 m2 <- setupExogenousCovariates(m2, paste0('pc', 1:5), paste0('t',1:4))
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 tdir <- tempdir()
 dir <- system.file("extdata", package = "gwsem")
 snp1 <- GWAS(m2, file.path(dir,"example.pgen"), file.path(tdir, "out.log"), SNP=1)
 summary(snp1)
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 GWAS(m2, file.path(dir,"example.pgen"), file.path(tdir, "out.log"))
 got <- loadResults(file.path(tdir, "out.log"), 'snp__slope')
 
-## ------------------------------------------------------------------------
-head(got[is.na(got$P),])
+## -----------------------------------------------------------------------------
+susp <- loadSuspicious(file.path(tdir, "out.log"), 'snp__slope')
+head(susp)
 
 
-## ---- message=FALSE------------------------------------------------------
-got$P[is.na(got$P)] <- 1
-
-library(qqman)
-manhattan(got)
+## ---- message=FALSE-----------------------------------------------------------
+plot(got)
 

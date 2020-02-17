@@ -21,18 +21,29 @@ indicators <- pheno$phenotype %*% t(loadings) +
   mvrnorm(nrow(pheno), mu=rep(0, numIndicators), Sigma=diag(numIndicators))
 colnames(indicators) <- paste0("i", 1:numIndicators)
 pheno <- cbind(pheno, indicators)
+#pheno$sex <- pheno$sex - min(pheno$sex) # will blow up
 
 # -----
 
-oi <- buildItem(pheno, paste0("i", 3), gxe=c("sex","i4"))
-expect_true(!is.null(oi$snp_sexAlg))
-expect_true(!is.null(oi$snp_i4Alg))
-expect_equal(oi$data$algebra, c("snp_sexAlg", "snp_i4Alg"))
+test_that("gxe data roundtrip", {
+  skip_if_not_installed("OpenMx", "2.16.0.1")
 
-fit <- GWAS(oi,
-             file.path(dir,"example.pgen"),
-             file.path(tdir, "out.log"), SNP=c(3))
-ob <- fit$data$observed
-# broken in OpenMx v2.16
-# expect_true(all(ob$snp * ob$sex == ob$snp_sex))
-# expect_true(all(ob$snp * ob$i4 == ob$snp_i4))
+  oi <- buildItem(pheno, paste0("i", 3), gxe=c("sex","i4"))
+  expect_true(!is.null(oi$snp_sexAlg))
+  expect_true(!is.null(oi$snp_i4Alg))
+  expect_equal(oi$data$algebra, c("snp_sexAlg", "snp_i4Alg"))
+
+  fit <- GWAS(oi,
+              file.path(dir,"example.pgen"),
+              file.path(tdir, "out.log"), SNP=c(3))
+  ob <- fit$data$observed
+  expect_true(all(ob$snp * ob$sex == ob$snp_sex))
+  expect_true(all(ob$snp * ob$i4 == ob$snp_i4))
+
+  pheno$snp <- runif(nrow(pheno), 0, 2)
+  oi <- buildItem(pheno, paste0("i", 3), gxe=c("sex","i4"))
+  fit2 <- mxRun(oi)
+  ob <- fit2$data$observed
+  expect_true(all(ob$snp * ob$sex == ob$snp_sex))
+  expect_true(all(ob$snp * ob$i4 == ob$snp_i4))
+})
