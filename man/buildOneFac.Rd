@@ -11,7 +11,6 @@ buildOneFac(
   ...,
   fitfun = c("WLS", "ML"),
   minMAF = 0.01,
-  modelType = c("RAM", "LISREL"),
   gxe = NULL,
   exogenous = NA
 )
@@ -28,8 +27,6 @@ buildOneFac(
 \item{fitfun}{A character string naming the fit function used to optimize the model. Must be either \sQuote{WLS} or \sQuote{ML}.}
 
 \item{minMAF}{A numerical value that specifies the minimum valid minor allele frequency for a SNP. SNPs with minimum minor allele frequencies that are smaller than the minMAF value will not be analyzed. Only used when \code{fitfun=WLS}}
-
-\item{modelType}{A character string that determines whether to use the \sQuote{RAM} or \sQuote{LISREL} parameterization for model specification.}
 
 \item{gxe}{a vector of data column names. Creates additional data
 columns named paste0('snp_',columnName) that are the

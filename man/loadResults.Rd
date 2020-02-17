@@ -4,7 +4,14 @@
 \alias{loadResults}
 \title{Load GWAS results into a single data.frame}
 \usage{
-loadResults(path, focus, ..., extraColumns = c(), .retainSE = FALSE)
+loadResults(
+  path,
+  focus,
+  ...,
+  extraColumns = c(),
+  .retainSE = FALSE,
+  signAdj = NULL
+)
 }
 \arguments{
 \item{path}{vector of paths to result files created by \link{GWAS}}
@@ -16,15 +23,26 @@ loadResults(path, focus, ..., extraColumns = c(), .retainSE = FALSE)
 \item{extraColumns}{character vector of additional columns to load}
 
 \item{.retainSE}{logical. Keep a column for the SE of the focus parameter}
+
+\item{signAdj}{name of column. Value of focus parameter is multiplied by the sign of the named column}
 }
 \description{
-A1 is the reference allele and A2 is the alternate allele.
+The \code{signAdj} column is important and not optional for latent
+factor models.  Loadings to factor indicators can take any sign. If
+your focus is the regression from the SNP to the factor then this
+regression estimate will need to be multiplied by the sign of one
+of the factor loadings. Pick a loading associated with a strong
+indicator of the factor.
 }
 \details{
+A1 is the reference allele and A2 is the alternate allele.
+
 Two columns are added, \code{Z} and \code{P}. \code{Z} is the
 focal parameter divded by its standard error. \code{P} is the
 unadjusted two-sided normal CDF corresponding to the absolute
 \code{Z} score.
+
+Suspicious rows are excluded.
 }
 \examples{
 tdir <- tempdir()
@@ -35,3 +53,10 @@ GWAS(m1, file.path(dir,"example.pgen"),
     file.path(tdir,"out.log"))
 loadResults(file.path(tdir,"out.log"), "snp2anxiety")
 }
+\seealso{
+Other reporting: 
+\code{\link{isSuspicious}()},
+\code{\link{loadSuspicious}()},
+\code{\link{plot.gwsemResult}()}
+}
+\concept{reporting}

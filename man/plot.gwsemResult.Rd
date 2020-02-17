@@ -26,6 +26,13 @@ pheno <- data.frame(anxiety=rnorm(500))
 m1 <- buildItem(pheno, 'anxiety')
 GWAS(m1, file.path(dir,"example.pgen"),
     file.path(tdir,"out.log"))
-got <- loadResults(file.path(tdir,"out.log"), "snp2anxiety")
+got <- loadResults(file.path(tdir,"out.log"), "snp_to_anxiety")
 plot(got)
 }
+\seealso{
+Other reporting: 
+\code{\link{isSuspicious}()},
+\code{\link{loadResults}()},
+\code{\link{loadSuspicious}()}
+}
+\concept{reporting}
