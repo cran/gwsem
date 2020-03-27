@@ -10,7 +10,8 @@ loadResults(
   ...,
   extraColumns = c(),
   .retainSE = FALSE,
-  signAdj = NULL
+  signAdj = NULL,
+  moderatorLevel = NULL
 )
 }
 \arguments{
@@ -25,6 +26,8 @@ loadResults(
 \item{.retainSE}{logical. Keep a column for the SE of the focus parameter}
 
 \item{signAdj}{name of column. Value of focus parameter is multiplied by the sign of the named column}
+
+\item{moderatorLevel}{see details}
 }
 \description{
 \lifecycle{maturing}

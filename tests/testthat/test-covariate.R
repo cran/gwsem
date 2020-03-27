@@ -9,7 +9,7 @@ dir <- system.file("extdata", package = "gwsem")
 tdir <- tempdir()
 
 pheno <- read.table(file.path(dir, "example.psam"),
-                    stringsAsFactors = FALSE,header=TRUE, comment.char="")
+                    as.is = TRUE, header=TRUE, comment.char="")
 colnames(pheno)[1] <- "FID"
 
 numIndicators <- 7
@@ -36,7 +36,7 @@ expect_equivalent(m1$M$labels[1,'covar1'], 'data.covar1')
 GWAS(m1, file.path(dir,"example.pgen"),
      file.path(tdir,"out.log"))
 
-pgen <- read.table(file.path(tdir,"out.log"), stringsAsFactors = FALSE, header=TRUE,
+pgen <- read.table(file.path(tdir,"out.log"), as.is = TRUE, header=TRUE,
                    sep="\t", check.names=FALSE, quote="", comment.char="")
 
 mask <- (pgen$catch1 == "" & pgen$statusCode=="OK" & !is.na(pgen$snp_to_FSE))
@@ -65,14 +65,15 @@ expect_true(all(!is.na(match(colnames(pgen), colnames(bad)))))
 # -----
 
 m2 <- buildOneFac(pheno, paste0("i", 1:numIndicators),
-                  covariates = paste0("covar",1:numCovariate))
+                  covariates = paste0("covar",1:numCovariate),
+                  exogenous = FALSE)
 expect_equivalent(m2$M$labels[1,'covar1'], 'covar1_mean')
 GWAS(m2,
      file.path(dir,"example.pgen"),
      file.path(tdir,"out.log"))
 
 pgen2 <- loadResults(file.path(tdir,"out.log"), "snp_to_F", signAdj='lambda_i1')
-expect_equal(nrow(pgen2), 196)
+expect_equal(nrow(pgen2), 196, 2)
 
 both <- intersect(pgen$SNP, pgen2$SNP)
 expect_equal(length(both), 196, 2)
@@ -90,7 +91,8 @@ GWAS(m1, file.path(dir,"example.pgen"),
      file.path(tdir,"outx.log"))
 
 m2 <- buildOneFacRes(pheno, paste0("i", 1:numIndicators),
-                     covariates = paste0("covar",1:numCovariate))
+                     covariates = paste0("covar",1:numCovariate),
+                     exogenous=FALSE)
 expect_equivalent(m2$M$labels[1,'covar1'], 'covar1_mean')
 GWAS(m2, file.path(dir,"example.pgen"),
      file.path(tdir,"out.log"))
@@ -102,7 +104,7 @@ for (ind in paste0("snp_to_i", 1:numIndicators)) {
   expect_equal(length(both), 200, 20)
   m1o <- subset(m1o, SNP %in% both)
   m2o <- subset(m2o, SNP %in% both)
-  expect_equal(cor(m1o$Z, m2o$Z), 1, tolerance=.05)
+  expect_equal(cor(m1o$Z, m2o$Z), 1, tolerance=.1)
 }
 
 # ----- compare TwoFac exo vs endo covariates
@@ -119,7 +121,8 @@ GWAS(m1, file.path(dir,"example.pgen"),
 m2 <- buildTwoFac(pheno,
                   paste0("i", 1:(numIndicators-1)),
                   paste0("i", 2:numIndicators),
-                  covariates = paste0("covar",1:numCovariate))
+                  covariates = paste0("covar",1:numCovariate),
+                  exogenous=FALSE)
 expect_equivalent(m2$M$labels[1,'covar1'], 'covar1_mean')
 GWAS(m2, file.path(dir,"example.pgen"),
      file.path(tdir,"out.log"))
@@ -142,7 +145,8 @@ for (fx in 1:2) {
 lastFit <- GWAS(buildTwoFac(pheno,
                             paste0("i", 1:(numIndicators-1)),
                             paste0("i", 2:numIndicators),
-                 covariates = paste0("covar",1:numCovariate)), SNP=1,
+                 covariates = paste0("covar",1:numCovariate),
+                 exogenous = FALSE), SNP=1,
      file.path(dir,"example.pgen"),
      file.path(tdir,"out.log"))
 
@@ -152,7 +156,7 @@ expect_equal(lastFit$A$labels['i2','F1'], "F1_lambda_i2")
 # ----- test ordinal endogenous covariates
 
 lastFit <- GWAS(buildOneFac(pheno, paste0("i", 2:numIndicators),
-                 covariates = 'i1'), SNP=1,
+                 covariates = 'i1', exogenous = FALSE), SNP=1,
      file.path(dir,"example.pgen"),
      file.path(tdir,"out.log"))
 

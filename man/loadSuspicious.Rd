@@ -4,7 +4,14 @@
 \alias{loadSuspicious}
 \title{Load suspicious GWAS results into a single data.frame}
 \usage{
-loadSuspicious(path, focus, ..., extraColumns = c(), signAdj = NULL)
+loadSuspicious(
+  path,
+  focus,
+  ...,
+  extraColumns = c(),
+  signAdj = NULL,
+  moderatorLevel = NULL
+)
 }
 \arguments{
 \item{path}{vector of paths to result files created by \link{GWAS}}
@@ -16,6 +23,8 @@ loadSuspicious(path, focus, ..., extraColumns = c(), signAdj = NULL)
 \item{extraColumns}{character vector of additional columns to load}
 
 \item{signAdj}{name of column. Value of focus parameter is multiplied by the sign of the named column}
+
+\item{moderatorLevel}{see details}
 }
 \description{
 \lifecycle{maturing}

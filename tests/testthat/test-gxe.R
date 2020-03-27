@@ -10,7 +10,7 @@ dir <- system.file("extdata", package = "gwsem")
 tdir <- tempdir()
 
 pheno <- read.table(file.path(dir, "example.psam"),
-                    stringsAsFactors = FALSE,header=TRUE, comment.char="")
+                    as.is = TRUE,header=TRUE, comment.char="")
 colnames(pheno)[1] <- "FID"
 colnames(pheno)[3] <- "sex"
 
@@ -46,4 +46,17 @@ test_that("gxe data roundtrip", {
   ob <- fit2$data$observed
   expect_true(all(ob$snp * ob$sex == ob$snp_sex))
   expect_true(all(ob$snp * ob$i4 == ob$snp_i4))
+})
+
+test_that("moderator level", {
+  oi <- buildItem(pheno, paste0("i", 3), covariates='snp_i4',
+                  gxe=c("i4"))
+  fit <- GWAS(oi,
+              file.path(dir,"example.pgen"),
+              file.path(tdir, "out.log"))
+  m1 <- loadResults(file.path(tdir, "out.log"), 'snp_i4_to_i3')
+  m2 <- loadResults(file.path(tdir, "out.log"), 'snp_i4_to_i3',
+                    moderatorLevel = .5)
+  m3 <- loadSuspicious(file.path(tdir, "out.log"), 'snp_i4_to_i3',
+                 moderatorLevel = .5)
 })
