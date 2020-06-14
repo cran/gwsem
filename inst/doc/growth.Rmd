@@ -1,6 +1,8 @@
 ---
 title: "Latent Growth Curve, Genome-Wide Association Study"
-output: rmarkdown::html_vignette
+output:
+  rmarkdown::html_vignette:
+    self_contained: false
 vignette: >
   %\VignetteIndexEntry{growth}
   %\VignetteEngine{knitr::rmarkdown}
@@ -12,6 +14,9 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
+is_CRAN <- !identical(Sys.getenv("NOT_CRAN"), "true")
+knitr::opts_chunk$set(eval = !is_CRAN)
+if (is_CRAN) knitr::knit_hooks$set(evaluate.inline = function(x, envir) x)
 ```
 
 Suppose you have longitudinal phenotypic measurements

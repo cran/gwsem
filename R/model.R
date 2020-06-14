@@ -9,6 +9,18 @@ makeFitFunction <- function(fitfun)
 
 calcMinVar <- function(minMAF) 2*minMAF*(1-minMAF)
 
+forModels <- function(topModel, modelName, fn) {
+  ret <- c()
+  if (topModel$name %in% modelName) {
+    ret <- c(fn(topModel))
+    names(ret) <- topModel$name
+  }
+  if (length(modelName) > 1) {
+    ret <- c(ret, sapply(setdiff(modelName, topModel$name), function(x) fn(topModel[[x]])))
+  }
+  ret
+}
+
 #' Return a suitable compute plan for a genome-wide association study
 #'
 #' \lifecycle{maturing}
@@ -27,7 +39,7 @@ calcMinVar <- function(minMAF) 2*minMAF*(1-minMAF)
 #' process the 100th and 200th SNP. The first SNP in the
 #' \code{snpData} file is at offset 1. When \code{SNP} is omitted then
 #' all available SNPs are processed.
-#' 
+#'
 #' The suffix of \code{snpData} filename is interpreted to signal the
 #' format of how the SNP data is stored on disk. Suffixes
 #' \sQuote{pgen}, \sQuote{bed}, and \sQuote{bgen} are supported.
@@ -76,7 +88,9 @@ calcMinVar <- function(minMAF) 2*minMAF*(1-minMAF)
 #' @importFrom methods is
 #' @seealso \link{GWAS}
 #' @examples
-#' m1 <- mxModel("test", mxFitFunctionWLS())
+#' pheno <- data.frame(anxiety=cut(rnorm(500), c(-Inf, -.5, .5, Inf),
+#' ordered_result = TRUE))
+#' m1 <- buildItem(pheno, 'anxiety')
 #' dir <- system.file("extdata", package = "gwsem")
 #' m1 <- prepareComputePlan(m1, file.path(dir,"example.pgen"))
 #' m1$compute
@@ -84,37 +98,52 @@ prepareComputePlan <- function(model, snpData, out="out.log", ...,
 			       SNP=NULL, startFrom=1L)
 {
   if (length(list(...)) > 0) stop("Rejected are any values passed in the '...' argument")
-  modelName <- model$name
-  pieces <- strsplit(snpData, ".", fixed=TRUE)[[1]]
-  if (length(pieces) < 2) {
-    stop(paste("Please rename snpData",omxQuotes(snpData),
+
+  loc <- strsplit(snpData, ".", fixed=TRUE)
+  locLen <- sapply(loc, length)
+  if (any(locLen < 2)) {
+    stop(paste("Please rename snpData", omxQuotes(snpData[locLen < 2]),
                "to the form file.ext where ext reflects the format of the data"))
   }
-  snpFileExt <- pieces[length(pieces)]
-  stem <- paste(pieces[-length(pieces)], collapse=".")
-
-  if (snpFileExt == 'pgen' || snpFileExt == 'bed') method <- 'pgen'
-  else if (snpFileExt == 'bgen') method <- 'bgen'
-  else stop(paste("Unrecognized file extension", omxQuotes(snpFileExt),
-                  "inferred from snpData", omxQuotes(snpData)))
-
-  onesnp <- list(
-    ST=mxComputeSetOriginalStarts(),
-    LD=mxComputeLoadData(modelName, column='snp',
-                         path=snpData, method=method))
-
-  if (snpFileExt == "pgen") {
-    onesnp <- c(
-      onesnp,
-      LC=mxComputeLoadContext(path=paste(stem, "pvar", sep = "."), column=1:5, sep='\t',
-			      col.names=c("CHR", "BP", "SNP", "A1", "A2")))
-  } else if (snpFileExt == "bed") {
-    onesnp <- c(
-      onesnp,
-      LC=mxComputeLoadContext(path=paste(stem, "bim", sep = "."),
-                              column=c(1,2,4:6), sep='\t', header=FALSE,
-                              col.names=c("CHR", "SNP", "BP", "A2", "A1")))
+  snpFileExt <- mapply(function(pieces, l) pieces[l],
+                       loc, locLen)
+  stem <- mapply(function(pieces, l) paste(pieces[-l], collapse="."),
+                       loc, locLen)
+  method <- sapply(snpFileExt, function(ext1) {
+    if (snpFileExt == 'pgen' || snpFileExt == 'bed') 'pgen'
+    else if (snpFileExt == 'bgen') 'bgen'
+    else NA
+  })
+  if (any(is.na(method))) {
+    stop(paste("Unrecognized file extension", omxQuotes(snpFileExt[is.na(method)]),
+               "inferred from snpData", omxQuotes(snpData[is.na(method)])))
   }
+
+  if (length(snpData) > 1 && length(names(snpData)) == 0)
+    stop(paste("Must provide model names for snpData. For example,\n",
+               "c(",omxQuotes(model$name),"=",snpData[1],")"))
+  modelName <- model$name
+  if (length(names(snpData))) modelName <- names(snpData)
+
+  onesnp <- mapply(function (mn1, snpData1, ext1, method1, stem1) {
+    p1 <- list(LD=mxComputeLoadData(mn1, column='snp',
+                              path=snpData1, method=method1))
+
+    if (ext1 == "pgen") {
+      p1 <- c(
+        p1,
+        LC=mxComputeLoadContext(path=paste(stem1, "pvar", sep = "."), column=1:5, sep='\t',
+                                col.names=c("CHR", "BP", "SNP", "A1", "A2")))
+    } else if (ext1 == "bed") {
+      p1 <- c(
+        p1,
+        LC=mxComputeLoadContext(path=paste(stem1, "bim", sep = "."),
+                                column=c(1,2,4:6), sep='\t', header=FALSE,
+                                col.names=c("CHR", "SNP", "BP", "A2", "A1")))
+    } else {
+      p1 # built-in to BGEN already
+    }
+  }, modelName, snpData, snpFileExt, method, stem)
 
   opt <- list(GD=mxComputeGradientDescent())
   if (is(model$fitfunction, "MxFitFunctionWLS")) {
@@ -126,11 +155,21 @@ prepareComputePlan <- function(model, snpData, out="out.log", ...,
 		   HQ=mxComputeHessianQuality())
   }
 
+  wantVcov <- any(forModels(model, modelName, function(m) {
+    d1 <- m$data
+    if (is.null(d1)) stop(paste("Model",omxQuotes(m$name),"contains no MxData"))
+    obs <- d1$observed
+    if (!('snp' %in% colnames(obs))) {
+      stop(paste("No snp placeholder column in observed data of model", omxQuotes(m$name)))
+    }
+    length(d1$algebra) > 0
+  }))
+
   onesnp <- c(
+    ST=mxComputeSetOriginalStarts(),
     onesnp,
     TC=mxComputeTryCatch(mxComputeSequence(opt)),
-    CK=mxComputeCheckpoint(path=out, standardErrors = TRUE,
-                           vcov = length(model$data$algebra) > 0))
+    CK=mxComputeCheckpoint(path=out, standardErrors = TRUE, vcov = wantVcov))
 
   mxModel(model, mxComputeLoop(onesnp, i=SNP, startFrom=startFrom))
 }
@@ -139,10 +178,10 @@ prepareComputePlan <- function(model, snpData, out="out.log", ...,
 #'
 #' \lifecycle{maturing}
 #' The GWAS function is used to run a genome-wide association study based on the specified model. This function is design to take the output from \link{buildOneFac}, \link{buildOneFacRes}, and \link{buildTwoFac} as input, but can also take a similar user specified model. Users should be confident that the models they are running are statistically identified. It is advisable that the users empirically gauge time requirements by running a limited number of SNPs (e.g. 10) to ensure that all SNPs can be fit in a reasonable amount of time.
-#' 
+#'
 #' Adds a compute plan returned by \link{prepareComputePlan} to the
 #' provided \code{model} and runs it. Once analyses are complete,
-#' load your aggregated results with \link{loadResults}. 
+#' load your aggregated results with \link{loadResults}.
 #'
 #' @template args-model
 #' @template args-snpData
@@ -183,7 +222,7 @@ GWAS <- function(model, snpData, out="out.log", ..., SNP=NULL, startFrom=1L)
 #' is returned without changes.
 #'
 #' @details
-#' 
+#'
 #' Thresholds are added using \link[OpenMx]{mxThreshold}. Starting
 #' values for thresholds use the defaults provided by this function
 #' which assumes a mean of zero and variance of the square root of
@@ -246,7 +285,7 @@ setupThresholds <- function(model)
 #' \link[OpenMx]{mxFitFunctionWLS}, only manifest indicators can be
 #' adjusted for exogenous covariates.
 #' This function always adjusts manifest indicators regardless of the fit function.
-#' 
+#'
 #' @template args-model
 #' @param covariates a character vector naming covariates available in the model data
 #' @param itemNames a character vector of item names
@@ -264,7 +303,7 @@ setupExogenousCovariates <- function(model, covariates, itemNames)
 {
   if (length(covariates)==0) return(model)
 
-  covMean   <- mxPath(from = "one", to = covariates, free=FALSE, labels = paste0('data.',covariates)) 
+  covMean   <- mxPath(from = "one", to = covariates, free=FALSE, labels = paste0('data.',covariates))
   cov2item  <- mxPath(from = covariates, to = itemNames, connect = "all.pairs",
                       labels = paste(rep(covariates, each = length(itemNames)), itemNames,
                                      sep = "_to_"))
@@ -375,7 +414,7 @@ postprocessModel <- function(model, indicators, exogenous)
 #'
 #' \lifecycle{maturing}
 #' @template detail-build
-#' 
+#'
 #' @section WLS Technical Note:
 #' When the \code{depVar} item is/are continuous,
 #' covariates are endogenous (the default),
@@ -430,7 +469,7 @@ buildItem <- function(phenoData, depVar, covariates=NULL, ..., fitfun = c("WLS",
   } else {
 	  latents <- c("snp", covariates)
   }
-  
+
   paths <- endogenousCovariatePaths(phenoData, endoCovariates, depVar)
   if (!exogenous) paths <- c(paths, endogenousSNPpath(depVar))
   paths <- c(paths,
@@ -467,7 +506,7 @@ buildOneItem <- function(phenoData, depVar, covariates=NULL, ..., fitfun = c("WL
 #' @template detail-build
 #'
 #' @template args-phenoData
-#' @param itemNames A vector of phenotypic item names (from \code{phenoData}) that load on the latent factor.
+#' @param itemNames a character list of the names of the items that load onto the latent variable. These names must match variable names in the phenoData file.
 #' @template args-covariates
 #' @template args-exogenous
 #' @template args-dots-barrier
@@ -532,12 +571,12 @@ buildOneFac <- function(phenoData, itemNames, covariates=NULL, ..., fitfun = c("
 #' The \code{buildOneFacRes} function is used to specify a single factor latent variable model where a combination of items as well as the latent variable may be predicted by a genomic variant such as a single nucleotide polymorphism, as well as range of covariates. \figure{resid.jpg}{Single Factor Model with a Focus on Residuals}
 #'
 #' Be aware that a latent variable model is not identified if all of the residuals as well as the latent variable are simultaneously predicted by the SNP.  Specifically, if users wish to use the SNP to predict the latent variable, they much choose at least one (and preferably more that one) item to not be predicted by the SNP.
-#' 
+#'
 #' @template detail-build
-#' 
-#' @param itemNames A vector of phenotypic item names (from phenoData) that load on the latent factor.
+#'
 #' @param factor A logical expression (\code{FALSE} or \code{TRUE}) indicating whether to estimate a regression pathway from the SNP to the latent factor (default FALSE).
 #' @param res A character vector of phenotypic item names that indicate which specific items the user wishes to regress on the SNP. The default is to regress all of the items on the SNP.
+#' @template args-itemNames
 #' @template args-phenoData
 #' @template args-covariates
 #' @template args-exogenous
@@ -545,7 +584,7 @@ buildOneFac <- function(phenoData, itemNames, covariates=NULL, ..., fitfun = c("
 #' @template args-minmaf
 #' @template args-dots-barrier
 #' @template args-gxe
-#' 
+#'
 #' @family model builder
 #' @export
 #' @return
@@ -561,7 +600,7 @@ buildOneFacRes <- function(phenoData, itemNames, factor = F, res = itemNames, co
 {
   if (length(list(...)) > 0) stop("Rejected are any values passed in the '...' argument")
   fitfun <- match.arg(fitfun)
-  
+
   fac <- sapply(phenoData[,itemNames,drop=FALSE], is.factor)
   if (is.na(exogenous)) exogenous <- defaultExogenous
 
@@ -607,10 +646,9 @@ buildOneFacRes <- function(phenoData, itemNames, factor = F, res = itemNames, co
 #' The buildTwoFac function is used to specify a model with two latent variables where each latent variable is simultaneously predicted by a genomic variant such as a single nucleotide polymorphism, as well as range of covariates. The model allows the latent variables to correlate to accomodate comorbidity between latent traits. \figure{twoFactor.jpg}{Two Factor Model}
 #'
 #' @template detail-build
-#' 
-#' @param F1itemNames A vector of phenotypic item names (from phenoData) that load on the first latent factor.
-#' @param F2itemNames a vector of phenotypic item names (from phenoData) that load on the second latent factor.
-#' 
+#'
+#' @template args-F1itemNames
+#' @template args-F2itemNames
 #' @template args-phenoData
 #' @template args-covariates
 #' @template args-exogenous
@@ -657,7 +695,7 @@ buildTwoFac <- function(phenoData, F1itemNames, F2itemNames, covariates = NULL, 
   paths <- c(paths,
 	     mxPath(from="F1", to=F1itemNames,values=1, labels = paste("F1_lambda", F1itemNames, sep = "_")  ),
 	     mxPath(from="F2", to=F2itemNames,values=1, labels = paste("F2_lambda", F2itemNames, sep = "_")  ),
-	     mxPath(from="F1", to= "F2", arrows=2,free=T, values=.3),
+	     mxPath(from="F1", to= "F2", arrows=2,free=T, values=.3, labels="facCov"),
 	     mxPath(from = itemNames, arrows=2, values=1, free = c(fac==0),
 		    labels = paste(c(itemNames), "res", sep = "_")),
 	     mxPath(from=depVar, arrows=2,free=F, values=1.0, labels = "facRes"),

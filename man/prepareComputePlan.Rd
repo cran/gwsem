@@ -14,17 +14,37 @@ prepareComputePlan(
 )
 }
 \arguments{
-\item{model}{A fully specified \link[OpenMx:MxModel-class]{MxModel} object that can be fit to each SNP.}
+\item{model}{an \link[OpenMx:MxModel-class]{MxModel} model, specified using RAM 
+or LISREL notation. The model argument is designed to take the output 
+from e.g. buildOneFac (or the other prebuilt GW-SEM functions), but 
+advanced users can specify their own arbitrary OpenMx Model or use Onyx 
+to draw their path diagrams.}
 
-\item{snpData}{A character vector specifying the pathname of a file where the SNP data is stored.}
+\item{snpData}{a pathway to a file containing GWAS data. The data can be 
+in a variety of forms, such as standard PLINK format (bed/bim/fam), 
+PLINK2 format (pgen/pvar/psam), Oxford format (bgen/sample), or CSV 
+format (csv format in much slower due to the lack of compression 
+for non-binary files).}
 
-\item{out}{A character vector containing the pathname where the results of fitted models shall be written.}
+\item{out}{a file name or pathway where the output from the analysis will be saved. 
+The default pathway is "out.log", which will save the file in the working 
+directory. Users should take caution when specifying the output file name so 
+that the output from different analyses/chromosomes do not overwrite existing files.}
 
 \item{...}{Not used.  Forces remaining arguments to be specified by name.}
 
-\item{SNP}{A vector of SNP indices to include in the analysis (e.g. 101:200 will run SNPs at offsets 101 to 200 counting from the beginning of the file); NULL is interpreted as all available SNPs.}
+\item{SNP}{a numerical range that specifies the number of SNPs to be evaluated 
+from the snpData file. This argument can be used to evaluate a subset of 
+snps for model testing. e.g. 1:10 will run the first 10 snps to make sure 
+that the model is functioning the way the users intends, that the files 
+exist pathways are correct. This option is also very useful to specify a 
+range of snps to be evaluated that is smaller than the complete file. For 
+example, users may wish to run several discrete batches of analyses for 
+chromosome 1, by running 1:10000, 100001:200000, etc. This prevents users 
+from constructing numerous snap files for each chromosome. The default 
+value of the SNP argument is NULL, which will run all snps in the file.}
 
-\item{startFrom}{the index to start from when \code{SNP=NULL}}
+\item{startFrom}{a numerical value indicating which SNP is the first SNP to be analyzed. The function will then run every SNP from the specified SNP to the end of the GWAS data file. This is very useful if the analysis stops for some reason (i.e. the cluster is restarted for maintenance) and you can start from the last SNP that you analyzed. Note, you will want to label the output file (specified in out) with a new file name so that you don't overwrite the existing results.}
 }
 \value{
 The given model with an appropriate compute plan.
@@ -82,7 +102,9 @@ the compute plan with a model (such as returned by \link{buildOneFac})
 to perform a GWAS.
 }
 \examples{
-m1 <- mxModel("test", mxFitFunctionWLS())
+pheno <- data.frame(anxiety=cut(rnorm(500), c(-Inf, -.5, .5, Inf),
+ordered_result = TRUE))
+m1 <- buildItem(pheno, 'anxiety')
 dir <- system.file("extdata", package = "gwsem")
 m1 <- prepareComputePlan(m1, file.path(dir,"example.pgen"))
 m1$compute

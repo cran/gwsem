@@ -3,6 +3,9 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
+is_CRAN <- !identical(Sys.getenv("NOT_CRAN"), "true")
+knitr::opts_chunk$set(eval = !is_CRAN)
+if (is_CRAN) knitr::knit_hooks$set(evaluate.inline = function(x, envir) x)
 
 ## ----setup, message=FALSE-----------------------------------------------------
 library(gwsem)  # load gwsem

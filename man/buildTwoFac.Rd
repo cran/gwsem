@@ -17,26 +17,51 @@ buildTwoFac(
 )
 }
 \arguments{
-\item{phenoData}{A matrix or data.frame which provides all of the phenotype data to the model (both the items and the covariates). Data should be constructed so that variables are on the columns and individuals are on the rows.}
+\item{phenoData}{the file pathway for the phenotypic data (e.g. "myData.txt" or 
+"phenotype/myData.txt"). This data file can include more variables than 
+those included in the analysis, but GW-SEM will only use the items/covariates 
+that are specified. (The dangers of very large dataset is that they can take 
+a long time to load and can take up space in the R environment. This should 
+not affect processing speed for the GWAS analysis, but can create headaches 
+for pre-processing).}
 
-\item{F1itemNames}{A vector of phenotypic item names (from phenoData) that load on the first latent factor.}
+\item{F1itemNames}{a character list of the names of the items that load 
+onto the first latent variable. These names must match variable names 
+in the phenoData file.}
 
-\item{F2itemNames}{a vector of phenotypic item names (from phenoData) that load on the second latent factor.}
+\item{F2itemNames}{a character list of the names of the items that load 
+onto the first latent variable. These names must match variable names 
+in the phenoData file.}
 
-\item{covariates}{A vector of data column names (from \code{phenoData}) to use as covariates (e.g. age, sex, and ancestry principle components).}
+\item{covariates}{a character list of covariates that the latent variable 
+will be regressed upon. The default vaule is NULL, but this is a 
+silly value as typically analysts will include e.g. age, sex, and 
+ancestry principle components in the analysis.}
 
 \item{...}{Not used.  Forces remaining arguments to be specified by name.}
 
-\item{fitfun}{A character string naming the fit function used to optimize the model. Must be either \sQuote{WLS} or \sQuote{ML}.}
+\item{fitfun}{The fitfun argument specifies which fit function should 
+be used in evaluating the GWAS model. Users may choose between 
+the relatively rapid "WLS", or the slower but asymptotically 
+optimal "ML". In many cases the the differences between the 
+fit functions is trivial and the faster "WLS" option should be 
+used, but in some situations the differences can be quite 
+meaningful (such as when data are Missing at Random - MAR).}
 
-\item{minMAF}{A numerical value that specifies the minimum valid minor allele frequency for a SNP. SNPs with minimum minor allele frequencies that are smaller than the minMAF value will not be analyzed. Only used when \code{fitfun=WLS}}
+\item{minMAF}{The minimum valid minor allele frequency (MAF). Large differences between the variances of two variables in the same model can cause optimization failures that invalidate the model. Further, very small minor allele frequencies are more affected by outliers or influential observations. Accordingly, users can specify the minimum allowable MAF. The default value is MAF > .01. Users may also wish to filter out small MAF alleles from their genotype files in other software programs, such as PLINK.}
 
-\item{gxe}{a vector of data column names. Creates additional data
-columns named paste0('snp_',columnName) that are the product of
-the SNP and the data in columnName. Add these new data columns to
-your list of covariates to use them as covariates.}
+\item{gxe}{The observed variable name that will be used to moderate (interact with) 
+the effect of the SNP on the phenotypes. For example, you may want to moderate 
+the SNP regression by sex. In this situation, you would specify gxe = "sex" and 
+add "snp_sex" to the list of covariates.}
 
-\item{exogenous}{logical value. Whether the covariates should be treated as exogenous (TRUE) or endogenous (FALSE).}
+\item{exogenous}{This argument specifies how you would like to integrate 
+the covariates into the analysis. If exogenous = T, each items will 
+be directly regressed on each covariate. If exogenous = F, the latent 
+factor(s) will be directly regressed on each covariate. Setting 
+exogenous = T does not assume that the items are related to the 
+covariates proportional to their factor loadings (which is probably 
+preferable in most cases).}
 }
 \value{
 \code{buildTwoFac} returns an \link[OpenMx:MxModel-class]{MxModel} object that can serve as input for the \link{GWAS} function.
@@ -46,13 +71,10 @@ your list of covariates to use them as covariates.}
 The buildTwoFac function is used to specify a model with two latent variables where each latent variable is simultaneously predicted by a genomic variant such as a single nucleotide polymorphism, as well as range of covariates. The model allows the latent variables to correlate to accomodate comorbidity between latent traits. \figure{twoFactor.jpg}{Two Factor Model}
 }
 \details{
-This function is designed to be passed to the \link{GWAS} function. The model that is returned, however, is a valid OpenMx model and can be fitted using \link[OpenMx]{mxRun} or \link[OpenMx]{mxTryHard}. Models should be tested to ensure that they are identified and fit the data as expected to avoid unnecessary computation of an invalid model.
-
-There is no limit on the number of items that can be included, but more items will exponentially increase computation time.  To address this, we suggest that users use the \sQuote{WLS} fit function. The \sQuote{WLS} fit function is dramatically faster than the \sQuote{ML} fit function, especially for ordinal items.
+You can pass the result of this function to \link{GWAS} to run a GWAS.
 
 Ordinal indicator thresholds are setup by
-\link{setupThresholds}. Exogenous covariates adjustments are setup by
-\link{setupExogenousCovariates}.
+\link{setupThresholds}.
 You can plot the model using \link[OpenMx]{omxGraphviz}.
 }
 \examples{
