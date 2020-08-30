@@ -9,9 +9,9 @@ loadResults(
   focus,
   ...,
   extraColumns = c(),
-  .retainSE = FALSE,
-  signAdj = NULL,
-  moderatorLevel = NULL
+  .retainSE = deprecated(),
+  signAdj = deprecated(),
+  moderatorLevel = deprecated()
 )
 }
 \arguments{
@@ -27,26 +27,14 @@ loadResults(
 
 \item{signAdj}{name of column. Value of focus parameter is multiplied by the sign of the named column}
 
-\item{moderatorLevel}{see details}
+\item{moderatorLevel}{\lifecycle{deprecated}}
+}
+\value{
+a data.table with one row per SNP
 }
 \description{
 \lifecycle{maturing}
-The \code{signAdj} column is important and not optional for latent
-factor models.  Loadings to factor indicators can take any sign. If
-your focus is the regression from the SNP to the factor then this
-regression estimate will need to be multiplied by the sign of one
-of the factor loadings. Pick a loading associated with a strong
-indicator of the factor.
-}
-\details{
 A1 is the reference allele and A2 is the alternate allele.
-
-Two columns are added, \code{Z} and \code{P}. \code{Z} is the
-focal parameter divded by its standard error. \code{P} is the
-unadjusted two-sided normal CDF corresponding to the absolute
-\code{Z} score.
-
-Suspicious rows are excluded.
 }
 \examples{
 tdir <- tempdir()
@@ -60,7 +48,8 @@ loadResults(file.path(tdir,"out.log"), "snp2anxiety")
 \seealso{
 Other reporting: 
 \code{\link{isSuspicious}()},
-\code{\link{loadSuspicious}()},
-\code{\link{plot.gwsemResult}()}
+\code{\link{plot.gwsemResult}()},
+\code{\link{signifGxE}()},
+\code{\link{signif}()}
 }
 \concept{reporting}

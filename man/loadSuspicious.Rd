@@ -27,8 +27,8 @@ loadSuspicious(
 \item{moderatorLevel}{see details}
 }
 \description{
-\lifecycle{maturing}
-These rows are excluded by \link{loadResults}.
+\lifecycle{deprecated}
+See example for how to change your code.
 }
 \examples{
 tdir <- tempdir()
@@ -37,12 +37,6 @@ pheno <- data.frame(anxiety=rnorm(500))
 m1 <- buildItem(pheno, 'anxiety')
 GWAS(m1, file.path(dir,"example.pgen"),
     file.path(tdir,"out.log"))
-loadSuspicious(file.path(tdir,"out.log"), "snp2anxiety")
+r1 <- loadResults(file.path(tdir,"out.log"), "snp_to_anxiety")
+r1[isSuspicious(r1, "snp_to_anxiety"),]
 }
-\seealso{
-Other reporting: 
-\code{\link{isSuspicious}()},
-\code{\link{loadResults}()},
-\code{\link{plot.gwsemResult}()}
-}
-\concept{reporting}

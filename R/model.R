@@ -81,6 +81,7 @@ forModels <- function(topModel, modelName, fn) {
 #' @template args-out
 #' @template args-dots-barrier
 #' @template args-startfrom
+#' @template args-rowFilter
 #' @return
 #' The given model with an appropriate compute plan.
 #'
@@ -95,7 +96,7 @@ forModels <- function(topModel, modelName, fn) {
 #' m1 <- prepareComputePlan(m1, file.path(dir,"example.pgen"))
 #' m1$compute
 prepareComputePlan <- function(model, snpData, out="out.log", ...,
-			       SNP=NULL, startFrom=1L)
+			       SNP=NULL, startFrom=1L, rowFilter=NULL)
 {
   if (length(list(...)) > 0) stop("Rejected are any values passed in the '...' argument")
 
@@ -124,10 +125,18 @@ prepareComputePlan <- function(model, snpData, out="out.log", ...,
                "c(",omxQuotes(model$name),"=",snpData[1],")"))
   modelName <- model$name
   if (length(names(snpData))) modelName <- names(snpData)
+  if (length(rowFilter)) {
+    noMatch <- is.na(match(names(rowFilter), modelName))
+    if (any(noMatch)) {
+      stop(paste("Cannot find model associated with rowFilter:",
+                 omxQuotes(names(rowFilter)[noMatch])))
+    }
+  }
 
   onesnp <- mapply(function (mn1, snpData1, ext1, method1, stem1) {
+    rf <- rowFilter[[mn1]]
     p1 <- list(LD=mxComputeLoadData(mn1, column='snp',
-                              path=snpData1, method=method1))
+                              path=snpData1, method=method1, rowFilter=rf))
 
     if (ext1 == "pgen") {
       p1 <- c(
@@ -155,21 +164,11 @@ prepareComputePlan <- function(model, snpData, out="out.log", ...,
 		   HQ=mxComputeHessianQuality())
   }
 
-  wantVcov <- any(forModels(model, modelName, function(m) {
-    d1 <- m$data
-    if (is.null(d1)) stop(paste("Model",omxQuotes(m$name),"contains no MxData"))
-    obs <- d1$observed
-    if (!('snp' %in% colnames(obs))) {
-      stop(paste("No snp placeholder column in observed data of model", omxQuotes(m$name)))
-    }
-    length(d1$algebra) > 0
-  }))
-
   onesnp <- c(
     ST=mxComputeSetOriginalStarts(),
     onesnp,
     TC=mxComputeTryCatch(mxComputeSequence(opt)),
-    CK=mxComputeCheckpoint(path=out, standardErrors = TRUE, vcov = wantVcov))
+    CK=mxComputeCheckpoint(path=out, standardErrors = FALSE, vcov = TRUE))
 
   mxModel(model, mxComputeLoop(onesnp, i=SNP, startFrom=startFrom))
 }
@@ -189,6 +188,7 @@ prepareComputePlan <- function(model, snpData, out="out.log", ...,
 #' @template args-out
 #' @template args-dots-barrier
 #' @template args-startfrom
+#' @template args-rowFilter
 #' @export
 #' @return
 #' The results for each SNP are recorded in the specified log file (\code{out}).
@@ -202,12 +202,13 @@ prepareComputePlan <- function(model, snpData, out="out.log", ...,
 #' m1 <- buildItem(pheno, 'anxiety')
 #' GWAS(m1, file.path(dir,"example.pgen"),
 #'      file.path(tempdir(),"out.log"))
-GWAS <- function(model, snpData, out="out.log", ..., SNP=NULL, startFrom=1L)
+GWAS <- function(model, snpData, out="out.log", ..., SNP=NULL, startFrom=1L,
+                 rowFilter=NULL)
 {
 	# verify model has a continuous 'snp' data column TODO
   if (length(list(...)) > 0) stop("Rejected are any values passed in the '...' argument")
   model <- prepareComputePlan(model, snpData, out=out,
-			      SNP=SNP, startFrom=startFrom)
+			      SNP=SNP, startFrom=startFrom, rowFilter=rowFilter)
   model <- mxRun(model)
   message(paste("Done. See", omxQuotes(out), "for results"))
   invisible(model)
@@ -347,12 +348,13 @@ addPlaceholderSNP <- function(phenoData) {
 	phenoData
 }
 
-endogenousSNPpath <- function(depVar)
+endogenousSNPpath <- function(pred, depVar)
 {
-	paths <- list(mxPath(from = "one", to = "snp" , labels = "snpMean"),
-		      mxPath(from = "snp", to = depVar, values = 0,
-			     labels=paste("snp", depVar, sep = "_to_")),
-		      mxPath(from = "snp", arrows=2, values=1, labels = paste("snp", "res", sep = "_")))
+	paths <- list(mxPath(from = "one", to = pred, labels = paste0(pred, 'Mean')),
+                mxPath(from = pred, to = depVar, values = 0,
+                       labels=paste(pred, depVar, sep = "_to_")),
+                mxPath(from = pred, arrows=2, values=1, lbound=0.001,
+                       labels = paste(pred, "res", sep = "_")))
 }
 
 endogenousCovariatePaths <- function(phenoData, covariates, depVar)
@@ -369,7 +371,7 @@ endogenousCovariatePaths <- function(phenoData, covariates, depVar)
 		} else {
 			paths <- c(paths, list(
 				mxPath(from='one',c1,labels=paste0(c1,"_mean")),
-				mxPath(from=c1, arrows=2, values=1, labels=paste0(c1,"_var"))))
+				mxPath(from=c1, arrows=2, values=1, lbound=0.001, labels=paste0(c1,"_var"))))
 		}
 		paths <- c(paths, list(
 			mxPath(from=c1, to=depVar, labels=paste0(c1,'_to_',depVar))))
@@ -434,6 +436,7 @@ postprocessModel <- function(model, indicators, exogenous)
 #' @template args-fitfun
 #' @template args-minmaf
 #' @template args-gxe
+#' @template args-pred
 #' @family model builder
 #' @export
 #' @return
@@ -444,7 +447,7 @@ postprocessModel <- function(model, indicators, exogenous)
 #'                     ordered_result = TRUE))
 #' m1 <- buildItem(pheno, 'anxiety')
 buildItem <- function(phenoData, depVar, covariates=NULL, ..., fitfun = c("WLS","ML"), minMAF=0.01,
-			 gxe=NULL, exogenous=NA)
+			 gxe=NULL, exogenous=NA, pred = 'snp')
 {
   if (length(list(...)) > 0) stop("Rejected are any values passed in the '...' argument")
   fitfun <- match.arg(fitfun)
@@ -463,19 +466,24 @@ buildItem <- function(phenoData, depVar, covariates=NULL, ..., fitfun = c("WLS",
   manifest <- depVar
   latents <- c()
   endoCovariates <- c()
+  if (length(gxe)) pred <- c(pred, paste0('snp_', gxe))
   if (!exogenous) {
-	  manifest <- c(manifest, "snp", covariates)
+	  manifest <- c(manifest, pred, covariates)
 	  endoCovariates <- covariates
   } else {
-	  latents <- c("snp", covariates)
+	  latents <- c(pred, covariates)
   }
 
   paths <- endogenousCovariatePaths(phenoData, endoCovariates, depVar)
-  if (!exogenous) paths <- c(paths, endogenousSNPpath(depVar))
+  if (!exogenous) {
+    paths <- c(paths, endogenousSNPpath(pred, depVar))
+  }
   paths <- c(paths,
-	     mxPath(from = c(depVar), arrows=2, values=1, free = !fac, labels = paste(c(depVar), "res", sep = "_")),
-	     mxPath(depVar, arrows=2, values=0, connect="unique.bivariate"),
-	     mxPath(from = 'one', to = depVar, free= !fac, values = 0, labels = paste0(depVar, "Mean")))
+             mxPath(from = c(depVar), arrows=2, values=1, lbound=0.001,
+                    free = !fac, labels = paste(c(depVar), "res", sep = "_")),
+             mxPath(depVar, arrows=2, values=0, connect="unique.bivariate"),
+             mxPath(from = 'one', to = depVar, free= !fac, values = 0,
+                    labels = paste0(depVar, "Mean")))
 
   dat       <- setupData(phenoData, gxe, force(!missing(minMAF)), minMAF, fitfun)
 
@@ -513,6 +521,7 @@ buildOneItem <- function(phenoData, depVar, covariates=NULL, ..., fitfun = c("WL
 #' @template args-fitfun
 #' @template args-minmaf
 #' @template args-gxe
+#' @template args-pred
 #' @family model builder
 #' @export
 #' @return
@@ -523,7 +532,7 @@ buildOneItem <- function(phenoData, depVar, covariates=NULL, ..., fitfun = c("WL
 #' pheno <- as.data.frame(pheno)
 #' buildOneFac(pheno, colnames(pheno))
 buildOneFac <- function(phenoData, itemNames, covariates=NULL, ..., fitfun = c("WLS","ML"), minMAF=0.01,
-			gxe=NULL, exogenous=NA)
+			gxe=NULL, exogenous=NA, pred ='snp')
 {
   if (length(list(...)) > 0) stop("Rejected are any values passed in the '...' argument")
   fitfun <- match.arg(fitfun)
@@ -532,7 +541,8 @@ buildOneFac <- function(phenoData, itemNames, covariates=NULL, ..., fitfun = c("
   if (is.na(exogenous)) exogenous <- defaultExogenous
 
   phenoData <- addPlaceholderSNP(phenoData)
-  manifest <- c("snp", itemNames)
+  manifest <- c(pred, itemNames)
+  if (length(gxe)) manifest <- c(manifest, paste0('snp_', gxe))
   depVar   <- c("F")
   latents  <- depVar
   exoPred <- c()
@@ -544,11 +554,13 @@ buildOneFac <- function(phenoData, itemNames, covariates=NULL, ..., fitfun = c("
 	  manifest <- c(manifest, covariates)
 	  endoCovariates <- covariates
   }
-  paths <- c(endogenousSNPpath(depVar), endogenousCovariatePaths(phenoData, endoCovariates, depVar))
+  if (length(gxe)) pred <- c(pred, paste0('snp_', gxe))
+  paths <- c(endogenousSNPpath(pred, depVar),
+             endogenousCovariatePaths(phenoData, endoCovariates, depVar))
   paths <- c(paths,
 	     mxPath(from=depVar, to=itemNames,values=1, free = T,
 		    labels = paste("lambda", itemNames, sep = "_")  ),
-	     mxPath(from = c(itemNames), arrows=2, values=1, free = !fac,
+	     mxPath(from = c(itemNames), arrows=2, values=1, lbound=0.001, free = !fac,
 		    labels = paste(c(itemNames), "res", sep = "_")),
 	     mxPath(from=depVar, arrows=2,free=F, values=1.0, labels = "facRes"),
 	     mxPath(from = 'one', to = itemNames, free= !fac, values = 0,
@@ -584,6 +596,7 @@ buildOneFac <- function(phenoData, itemNames, covariates=NULL, ..., fitfun = c("
 #' @template args-minmaf
 #' @template args-dots-barrier
 #' @template args-gxe
+#' @template args-pred
 #'
 #' @family model builder
 #' @export
@@ -596,7 +609,7 @@ buildOneFac <- function(phenoData, itemNames, covariates=NULL, ..., fitfun = c("
 #' buildOneFacRes(pheno, colnames(pheno))
 buildOneFacRes <- function(phenoData, itemNames, factor = F, res = itemNames, covariates = NULL,
 			   ..., fitfun = c("WLS","ML"), minMAF = .01, gxe=NULL,
-			 exogenous=NA)
+			 exogenous=NA,   pred ='snp')
 {
   if (length(list(...)) > 0) stop("Rejected are any values passed in the '...' argument")
   fitfun <- match.arg(fitfun)
@@ -605,7 +618,8 @@ buildOneFacRes <- function(phenoData, itemNames, factor = F, res = itemNames, co
   if (is.na(exogenous)) exogenous <- defaultExogenous
 
   phenoData <- addPlaceholderSNP(phenoData)
-  manifest <- c("snp", itemNames)
+  manifest <- c(pred, itemNames)
+  if (length(gxe)) manifest <- c(manifest, paste0('snp_', gxe))
   latents   <- c("F")
   depVar <- res
   if (factor) depVar <- c(latents, res)
@@ -619,11 +633,13 @@ buildOneFacRes <- function(phenoData, itemNames, factor = F, res = itemNames, co
 	  endoCovariates <- covariates
   }
 
-  paths <- c(endogenousSNPpath(depVar), endogenousCovariatePaths(phenoData, endoCovariates, 'F'))
+  if (length(gxe)) pred <- c(pred, paste0('snp_', gxe))
+  paths <- c(endogenousSNPpath(pred, depVar),
+             endogenousCovariatePaths(phenoData, endoCovariates, 'F'))
   paths <- c(paths,
 	     mxPath(from="F", to=itemNames,values=1, free = T,
 		    labels = paste("lambda", itemNames, sep = "_")  ),
-	     mxPath(from = c(itemNames), arrows=2, values=1, free = c(fac==0),
+	     mxPath(from = c(itemNames), arrows=2, values=1, lbound=0.001, free = c(fac==0),
 		    labels = paste(c(itemNames), "res", sep = "_")),
 	     mxPath(from="F", arrows=2,free=F, values=1.0, labels = "facRes"),
 	     mxPath(from = 'one', to = itemNames, free= c(fac==0), values = 0,
@@ -656,6 +672,7 @@ buildOneFacRes <- function(phenoData, itemNames, factor = F, res = itemNames, co
 #' @template args-minmaf
 #' @template args-dots-barrier
 #' @template args-gxe
+#' @template args-pred
 #' @export
 #' @family model builder
 #' @return
@@ -667,7 +684,7 @@ buildOneFacRes <- function(phenoData, itemNames, factor = F, res = itemNames, co
 #' buildTwoFac(pheno, paste0('i',1:6), paste0('i',5:10))
 buildTwoFac <- function(phenoData, F1itemNames, F2itemNames, covariates = NULL, ...,
 			fitfun = c("WLS","ML"), minMAF = .01, gxe=NULL,
-			exogenous=NA)
+			exogenous=NA, pred= 'snp')
 {
   if (length(list(...)) > 0) stop("Rejected are any values passed in the '...' argument")
   fitfun <- match.arg(fitfun)
@@ -678,7 +695,8 @@ buildTwoFac <- function(phenoData, F1itemNames, F2itemNames, covariates = NULL, 
   if (is.na(exogenous)) exogenous <- defaultExogenous
 
   phenoData <- addPlaceholderSNP(phenoData)
-  manifest <- c("snp", itemNames)
+  manifest <- c(pred, itemNames)
+  if (length(gxe)) manifest <- c(manifest, paste0('snp_', gxe))
   depVar <- c("F1", "F2")
   latents   <- depVar
   exoPred <- c()
@@ -691,12 +709,14 @@ buildTwoFac <- function(phenoData, F1itemNames, F2itemNames, covariates = NULL, 
 	  endoCovariates <- covariates
   }
 
-  paths <- c(endogenousSNPpath(depVar), endogenousCovariatePaths(phenoData, endoCovariates, depVar))
+  if (length(gxe)) pred <- c(pred, paste0('snp_', gxe))
+  paths <- c(endogenousSNPpath(pred, depVar),
+             endogenousCovariatePaths(phenoData, endoCovariates, depVar))
   paths <- c(paths,
 	     mxPath(from="F1", to=F1itemNames,values=1, labels = paste("F1_lambda", F1itemNames, sep = "_")  ),
 	     mxPath(from="F2", to=F2itemNames,values=1, labels = paste("F2_lambda", F2itemNames, sep = "_")  ),
 	     mxPath(from="F1", to= "F2", arrows=2,free=T, values=.3, labels="facCov"),
-	     mxPath(from = itemNames, arrows=2, values=1, free = c(fac==0),
+	     mxPath(from = itemNames, arrows=2, values=1, lbound=0.001, free = c(fac==0),
 		    labels = paste(c(itemNames), "res", sep = "_")),
 	     mxPath(from=depVar, arrows=2,free=F, values=1.0, labels = "facRes"),
 	     mxPath(from = 'one', to = itemNames, free= c(fac==0), values = 0, labels = paste0(itemNames, "Mean")))

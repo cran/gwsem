@@ -4,7 +4,15 @@
 \alias{GWAS}
 \title{Run a genome-wide association study (GWAS) using the provided model}
 \usage{
-GWAS(model, snpData, out = "out.log", ..., SNP = NULL, startFrom = 1L)
+GWAS(
+  model,
+  snpData,
+  out = "out.log",
+  ...,
+  SNP = NULL,
+  startFrom = 1L,
+  rowFilter = NULL
+)
 }
 \arguments{
 \item{model}{an \link[OpenMx:MxModel-class]{MxModel} model, specified using RAM 
@@ -38,6 +46,8 @@ from constructing numerous snap files for each chromosome. The default
 value of the SNP argument is NULL, which will run all snps in the file.}
 
 \item{startFrom}{a numerical value indicating which SNP is the first SNP to be analyzed. The function will then run every SNP from the specified SNP to the end of the GWAS data file. This is very useful if the analysis stops for some reason (i.e. the cluster is restarted for maintenance) and you can start from the last SNP that you analyzed. Note, you will want to label the output file (specified in out) with a new file name so that you don't overwrite the existing results.}
+
+\item{rowFilter}{optional named list of logical vectors to indicate which rows to skip when loading the SNP column}
 }
 \value{
 The results for each SNP are recorded in the specified log file (\code{out}).

@@ -33,6 +33,7 @@ plot(got)
 Other reporting: 
 \code{\link{isSuspicious}()},
 \code{\link{loadResults}()},
-\code{\link{loadSuspicious}()}
+\code{\link{signifGxE}()},
+\code{\link{signif}()}
 }
 \concept{reporting}

@@ -4,36 +4,29 @@
 \alias{isSuspicious}
 \title{Determine which results are suspicious}
 \usage{
-isSuspicious(got, pars)
+isSuspicious(result, pars = attr(result, "focus"))
 }
 \arguments{
-\item{got}{output passed from \link{loadResults}}
+\item{result}{output from \link{loadResults}}
 
-\item{pars}{names of the parameters available in \code{got}}
+\item{pars}{names of the parameters available in \code{result}}
 }
 \value{
-a vector of logicals for each row of \code{got} indicating suspicion (if TRUE)
+a vector of logicals for each row of \code{result} indicating suspicion (if TRUE)
 }
 \description{
 \lifecycle{maturing}
 The \link{GWAS} function writes all results, both valid and
 invalid, to a log file. This function uses heuristics to try to
-classify rows as suspicious or unsuspicious.  The
-\link{loadResults} function returns unsuspicious rows while
-\link{loadSuspicious} returns suspicious rows.
+classify rows as suspicious or unsuspicious.
 }
 \details{
-Is it not recommended to call \code{isSuspicious} directly because
-it is already called by \link{loadResults} and \link{loadSuspicious}.
-
 OpenMx reports exceptions in the \sQuote{catch1}
   column. Any error message in the \sQuote{catch1} column is
   suspicious. Any optimizer status code besides \sQuote{OK} is
   suspicious. It is suspicious if the focal parameter or its
   standard error is \code{NA}. If \sQuote{signAdj} was requested
-  and it is \code{NA} then suspicion is also aroused.  A mean and
-  standard deviation are computed for each available parameter.
-Any estimate with an absolute Z score larger than 10 is suspicious.
+  and it is \code{NA} then suspicion is also aroused.
 }
 \examples{
 tdir <- tempdir()
@@ -42,12 +35,14 @@ pheno <- data.frame(anxiety=rnorm(500))
 m1 <- buildItem(pheno, 'anxiety')
 GWAS(m1, file.path(dir,"example.pgen"),
     file.path(tdir,"out.log"))
-loadResults(file.path(tdir,"out.log"), "snp2anxiety")  # called in here
+r1 <- loadResults(file.path(tdir,"out.log"), "snp_to_anxiety")
+r1[isSuspicious(r1, "snp_to_anxiety"),]
 }
 \seealso{
 Other reporting: 
 \code{\link{loadResults}()},
-\code{\link{loadSuspicious}()},
-\code{\link{plot.gwsemResult}()}
+\code{\link{plot.gwsemResult}()},
+\code{\link{signifGxE}()},
+\code{\link{signif}()}
 }
 \concept{reporting}

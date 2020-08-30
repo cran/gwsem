@@ -13,7 +13,8 @@ buildItem(
   fitfun = c("WLS", "ML"),
   minMAF = 0.01,
   gxe = NULL,
-  exogenous = NA
+  exogenous = NA,
+  pred = "snp"
 )
 }
 \arguments{
@@ -56,6 +57,8 @@ factor(s) will be directly regressed on each covariate. Setting
 exogenous = T does not assume that the items are related to the 
 covariates proportional to their factor loadings (which is probably 
 preferable in most cases).}
+
+\item{pred}{character vector of variables that predict the phenotype(s). These predictors are always endogenous to the model (unaffected by the `exogenous` option).}
 }
 \value{
 A \link[OpenMx:MxModel-class]{MxModel}
