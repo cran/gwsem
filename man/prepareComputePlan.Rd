@@ -109,7 +109,7 @@ pheno <- data.frame(anxiety=cut(rnorm(500), c(-Inf, -.5, .5, Inf),
 ordered_result = TRUE))
 m1 <- buildItem(pheno, 'anxiety')
 dir <- system.file("extdata", package = "gwsem")
-m1 <- prepareComputePlan(m1, file.path(dir,"example.pgen"))
+m1 <- prepareComputePlan(m1, file.path(dir,"example.bgen"))
 m1$compute
 }
 \seealso{

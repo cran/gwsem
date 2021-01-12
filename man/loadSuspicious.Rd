@@ -35,7 +35,7 @@ tdir <- tempdir()
 dir <- system.file("extdata", package = "gwsem")
 pheno <- data.frame(anxiety=rnorm(500))
 m1 <- buildItem(pheno, 'anxiety')
-GWAS(m1, file.path(dir,"example.pgen"),
+GWAS(m1, file.path(dir,"example.bgen"),
     file.path(tdir,"out.log"))
 r1 <- loadResults(file.path(tdir,"out.log"), "snp_to_anxiety")
 r1[isSuspicious(r1, "snp_to_anxiety"),]

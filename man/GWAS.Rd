@@ -69,6 +69,6 @@ load your aggregated results with \link{loadResults}.
 dir <- system.file("extdata", package = "gwsem")
 pheno <- data.frame(anxiety=rnorm(500))
 m1 <- buildItem(pheno, 'anxiety')
-GWAS(m1, file.path(dir,"example.pgen"),
+GWAS(m1, file.path(dir,"example.bgen"),
      file.path(tempdir(),"out.log"))
 }
