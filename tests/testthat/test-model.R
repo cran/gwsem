@@ -100,7 +100,7 @@ pgen <- loadResults(file.path(tdir, "out.log"), "snp_to_i3")
 pgen <- signif(pgen, "snp_to_i3")
 rx <- which(min(pgen$P) == pgen$P)
 expect_equal(rx, 4)
-expect_equal(pgen$P[rx], .086, tolerance=1e-2)
+expect_equal(pgen$P[rx], .176, tolerance=1e-2)
 
 # -----------------
 
@@ -138,6 +138,7 @@ m1 <- buildOneFacRes(pheno, paste0("i", 1:numIndicators), factor=TRUE)
 expect_true(m1$A$free['F','snp'])
 
 m2 <- buildOneFacRes(pheno, paste0("i", 1:numIndicators))
+m2$A[paste0('i',1:7),'F']$lbound <- 0
 m2 <- GWAS(m2,
      file.path(dir,"example.pgen"),
      file.path(tdir, "out.log"), SNP=c(3:5))

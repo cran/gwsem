@@ -87,6 +87,7 @@ forModels <- function(topModel, modelName, fn) {
 #'
 #' @export
 #' @importFrom methods is
+#' @importFrom stats coef
 #' @seealso \link{GWAS}
 #' @examples
 #' pheno <- data.frame(anxiety=cut(rnorm(500), c(-Inf, -.5, .5, Inf),
@@ -142,13 +143,13 @@ prepareComputePlan <- function(model, snpData, out="out.log", ...,
       p1 <- c(
         p1,
         LC=mxComputeLoadContext(path=paste(stem1, "pvar", sep = "."), column=1:5, sep='\t',
-                                col.names=c("CHR", "BP", "SNP", "A1", "A2")))
+                                col.names=c("CHR", "BP", "SNP", "A2", "A1")))
     } else if (ext1 == "bed") {
       p1 <- c(
         p1,
         LC=mxComputeLoadContext(path=paste(stem1, "bim", sep = "."),
                                 column=c(1,2,4:6), sep='\t', header=FALSE,
-                                col.names=c("CHR", "SNP", "BP", "A2", "A1")))
+                                col.names=c("CHR", "SNP", "BP", "A1", "A2")))
     } else {
       p1 # built-in to BGEN already
     }
@@ -168,7 +169,8 @@ prepareComputePlan <- function(model, snpData, out="out.log", ...,
     ST=mxComputeSetOriginalStarts(),
     onesnp,
     TC=mxComputeTryCatch(mxComputeSequence(opt)),
-    CK=mxComputeCheckpoint(path=out, standardErrors = FALSE, vcov = TRUE))
+    CK=mxComputeCheckpoint(path=out, standardErrors = FALSE, vcov = TRUE,
+                           vcovFilter=grep('^snp_', names(coef(model)), value=TRUE)))
 
   mxModel(model, mxComputeLoop(onesnp, i=SNP, startFrom=startFrom))
 }

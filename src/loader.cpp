@@ -74,8 +74,8 @@ struct LoadDataBGENProvider2 : public LoadDataProvider2<LoadDataBGENProvider2> {
 		cp.push_back("RSID");
 		cp.push_back("CHR");
 		cp.push_back("BP");
-		cp.push_back("A1");
 		cp.push_back("A2");
+		cp.push_back("A1");
 		cp.push_back("MAF");
 	}
 	virtual int getNumVariants();
@@ -287,7 +287,8 @@ void LoadDataPGENProvider2::loadRowImpl(int index)
 		PgenHeaderCtrl header_ctrl;
 		uintptr_t pgfi_alloc_cacheline_ct;
 		char errstr_buf[kPglErrstrBufBlen];
-		if (PgfiInitPhase1(filePath.c_str(), cur_variant_ct, cur_sample_ct, 0, &header_ctrl,
+    int use_mmap = 0;
+		if (PgfiInitPhase1(filePath.c_str(), cur_variant_ct, cur_sample_ct, use_mmap, &header_ctrl,
 				   pgen_info.get(), &pgfi_alloc_cacheline_ct, errstr_buf) != kPglRetSuccess) {
 			mxThrow("%s: PgfiInitPhase1(%s) %s", name, filePath.c_str(), errstr_buf);
 		}
@@ -383,13 +384,29 @@ void LoadDataPGENProvider2::loadRowImpl(int index)
 	}
 }
 
-#endif // SKIP_PLINK
+#endif
+
+unsigned int DJBHash(const char *str, std::size_t len)
+{
+   unsigned int hash = 5381;
+
+   for(std::size_t i = 0; i < len; i++) {
+     hash = ((hash << 5) + hash) + str[i];
+   }
+
+   return hash;
+}
 
 void setup2(AddLoadDataProviderType aldp)
 {
-	int sz2 = sizeof(LoadDataProviderBase2);
+  std::size_t sz2[] = {
+               sizeof(dataPtr),
+               sizeof(LoadDataProviderBase2),
+               sizeof(ColumnData)
+  };
+  auto apiHash = DJBHash((char*)sz2, sizeof(sz2));
 #ifndef SKIP_PLINK
-	aldp(OPENMX_LOAD_DATA_API_VERSION, sz2, new LoadDataPGENProvider2());
+	aldp(OPENMX_LOAD_DATA_API_VERSION, apiHash, new LoadDataPGENProvider2());
 #endif
-	aldp(OPENMX_LOAD_DATA_API_VERSION, sz2, new LoadDataBGENProvider2());
+	aldp(OPENMX_LOAD_DATA_API_VERSION, apiHash, new LoadDataBGENProvider2());
 }
