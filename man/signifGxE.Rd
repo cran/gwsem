@@ -15,7 +15,7 @@ signifGxE(result, focus, level)
 \item{level}{numeric level of the moderator}
 }
 \value{
-result with new Z and P columns
+result with new ME, ME.SE, Z, and P columns
 }
 \description{
 Compute Z score and p-value for parameter of focus at particular

@@ -1,7 +1,7 @@
 Type: Package
 Package: gwsem
 Title: Genome-Wide Structural Equation Modeling
-Version: 2.1.0
+Version: 2.1.1
 Authors@R: 
     c(person(given = c("Joshua", "N."),
              family = "Pritikin",
@@ -54,11 +54,10 @@ LinkingTo: BH (>= 1.69.0-1), Rcpp
 RdMacros: lifecycle
 Encoding: UTF-8
 Language: en-US
-LazyData: true
 NeedsCompilation: yes
-RoxygenNote: 7.1.0
+RoxygenNote: 7.1.1
 SystemRequirements: GNU make
-Packaged: 2021-03-11 12:23:22 UTC; joshua
+Packaged: 2021-08-05 15:53:16 UTC; joshua
 Author: Joshua N. Pritikin [aut, cre],
   Bradley Verhulst [cph],
   Gavin Band [cph],
@@ -71,4 +70,4 @@ Author: Joshua N. Pritikin [aut, cre],
   Kim Walisch [cph]
 Maintainer: Joshua N. Pritikin <jpritikin@pobox.com>
 Repository: CRAN
-Date/Publication: 2021-03-11 23:10:03 UTC
+Date/Publication: 2021-08-05 17:20:02 UTC
