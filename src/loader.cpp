@@ -90,10 +90,6 @@ int LoadDataBGENProvider2::getNumVariants()
 void LoadDataBGENProvider2::loadRowImpl(int index)
 {
 	// discard m_postheader_data? TODO
-	if (columns.size() != 1) mxThrow("%s: bgen only has 1 column, not %d",
-					 name, int(columns.size()));
-	if (colTypes[0] != COLUMNDATA_NUMERIC) mxThrow("%s: bgen contains a numeric dosage", name);
-
 	if (curRecord != index) bgenView.reset();
 
 	if (bgenView.get() == 0) {
@@ -107,13 +103,18 @@ void LoadDataBGENProvider2::loadRowImpl(int index)
 		query->initialise();
 		bgenView->set_query( query ) ;
 		curRecord = index;
-		if (srcRows != int(bgenView->number_of_samples())) {
+    if (columns.size() && srcRows != int(bgenView->number_of_samples())) {
 			mxThrow("%s: %s has %d rows but %s has %d samples",
 				name, dataName, srcRows, filePath.c_str(),
 				int(bgenView->number_of_samples()));
 		}
 		loadCounter += 1;
 	}
+
+  if (columns.size() == 0) return;
+	if (columns.size() != 1) mxThrow("%s: bgen only has 1 column, not %d",
+					 name, int(columns.size()));
+	if (colTypes[0] != COLUMNDATA_NUMERIC) mxThrow("%s: bgen contains a numeric dosage", name);
 
 	std::string SNPID, rsid, chromosome ;
 	genfile::bgen::uint32_t position ;
@@ -137,7 +138,9 @@ void LoadDataBGENProvider2::loadRowImpl(int index)
 		cv[cpIndex+3] = string_snprintf("%u", position);
 		cv[cpIndex+4] = alleles[1];
 		cv[cpIndex+5] = alleles[0];
-		cv[cpIndex+6] = string_snprintf("%.8f", xfer.total / (2.0 * xfer.nrows));
+    double maf = xfer.total / (2.0 * xfer.nrows);
+    if (maf > .5) maf = 1-maf;
+		cv[cpIndex+6] = string_snprintf("%.8f", maf);
 	}
 }
 
@@ -270,20 +273,33 @@ void Dosage16ToDoubles(const uintptr_t* genoarr, const uintptr_t* dosage_present
 }
 
 int LoadDataPGENProvider2::getNumVariants()
-{ return pgen_info->raw_variant_ct; }
+{
+  if (pgen_info) return pgen_info->raw_variant_ct;
+  return NA_INTEGER;
+}
 
+bool hasEnding(std::string const &fullString, std::string const &ending)
+{
+    if (fullString.length() >= ending.length()) {
+        return (0 == fullString.compare(fullString.length() - ending.length(),
+                                        ending.length(), ending));
+    } else {
+        return false;
+    }
+}
 void LoadDataPGENProvider2::loadRowImpl(int index)
 {
-	if (columns.size() != 1) mxThrow("%s: pgen only has 1 column, not %d",
-					 name, int(columns.size()));
-
 	// adapted from plink-ng/2.0/Python/pgenlib.pyx
 	if (!pgen_info) {
+		uint32_t cur_sample_ct = srcRows;
+    if (columns.size() == 0) {
+      if (hasEnding(filePath, ".bed")) return;
+      cur_sample_ct = UINT32_MAX;
+    }
 		pgen_info = PgenFileInfoPtr(new PgenFileInfo);
 		PreinitPgfi(pgen_info.get());
 		pgen_info->vrtypes = 0;
 		uint32_t cur_variant_ct = 0xffffffffU;
-		uint32_t cur_sample_ct = srcRows;
 		PgenHeaderCtrl header_ctrl;
 		uintptr_t pgfi_alloc_cacheline_ct;
 		char errstr_buf[kPglErrstrBufBlen];
@@ -346,6 +362,10 @@ void LoadDataPGENProvider2::loadRowImpl(int index)
 		loadCounter += 1;
 	}
 
+  if (columns.size() == 0) return;
+	if (columns.size() != 1) mxThrow("%s: pgen only has 1 column, not %d",
+					 name, int(columns.size()));
+
 	if (1+index > int(pgen_info->raw_variant_ct)) {
 	  mxThrow("%s: out of data (record %d requested but only %d in file)",
 		  name, 1+index, int(pgen_info->raw_variant_ct));
@@ -371,6 +391,7 @@ void LoadDataPGENProvider2::loadRowImpl(int index)
 			nrows += 1;
 		}
 		maf /= 2.0 * nrows;
+    if (maf > 0.5) maf = 1-maf;
 	} else {
 		stop("Treating genetic data as an ordinal factor is not implemented");
 	}

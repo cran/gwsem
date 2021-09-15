@@ -21,6 +21,29 @@ forModels <- function(topModel, modelName, fn) {
   ret
 }
 
+processSnpData <- function(snpData) {
+  loc <- strsplit(snpData, ".", fixed=TRUE)
+  locLen <- sapply(loc, length)
+  if (any(locLen < 2)) {
+    stop(paste("Please rename snpData", omxQuotes(snpData[locLen < 2]),
+               "to the form file.ext where ext reflects the format of the data"))
+  }
+  snpFileExt <- mapply(function(pieces, l) pieces[l],
+                       loc, locLen)
+  stem <- mapply(function(pieces, l) paste(pieces[-l], collapse="."),
+                       loc, locLen)
+  method <- sapply(snpFileExt, function(ext1) {
+    if (ext1 == 'pgen' || ext1 == 'bed') 'pgen'
+    else if (ext1 == 'bgen') 'bgen'
+    else NA
+  })
+  if (any(is.na(method))) {
+    stop(paste("Unrecognized file extension", omxQuotes(snpFileExt[is.na(method)]),
+               "inferred from snpData", omxQuotes(snpData[is.na(method)])))
+  }
+  list(snpFileExt=snpFileExt, stem=stem, method=method)
+}
+
 #' Return a suitable compute plan for a genome-wide association study
 #'
 #' \lifecycle{maturing}
@@ -82,6 +105,7 @@ forModels <- function(topModel, modelName, fn) {
 #' @template args-dots-barrier
 #' @template args-startfrom
 #' @template args-rowFilter
+#' @template args-header
 #' @return
 #' The given model with an appropriate compute plan.
 #'
@@ -97,36 +121,21 @@ forModels <- function(topModel, modelName, fn) {
 #' m1 <- prepareComputePlan(m1, file.path(dir,"example.bgen"))
 #' m1$compute
 prepareComputePlan <- function(model, snpData, out="out.log", ...,
-			       SNP=NULL, startFrom=1L, rowFilter=NULL)
+			       SNP=NULL, startFrom=1L, rowFilter=NULL, header=NA)
 {
   if (length(list(...)) > 0) stop("Rejected are any values passed in the '...' argument")
 
-  loc <- strsplit(snpData, ".", fixed=TRUE)
-  locLen <- sapply(loc, length)
-  if (any(locLen < 2)) {
-    stop(paste("Please rename snpData", omxQuotes(snpData[locLen < 2]),
-               "to the form file.ext where ext reflects the format of the data"))
-  }
-  snpFileExt <- mapply(function(pieces, l) pieces[l],
-                       loc, locLen)
-  stem <- mapply(function(pieces, l) paste(pieces[-l], collapse="."),
-                       loc, locLen)
-  method <- sapply(snpFileExt, function(ext1) {
-    if (ext1 == 'pgen' || ext1 == 'bed') 'pgen'
-    else if (ext1 == 'bgen') 'bgen'
-    else NA
-  })
-  if (any(is.na(method))) {
-    stop(paste("Unrecognized file extension", omxQuotes(snpFileExt[is.na(method)]),
-               "inferred from snpData", omxQuotes(snpData[is.na(method)])))
-  }
+  psd <- processSnpData(snpData)
+  snpFileExt <- psd$snpFileExt
+  stem <- psd$stem
+  method <- psd$method
 
   if (length(snpData) > 1 && length(names(snpData)) == 0)
     stop(paste("Must provide model names for snpData. For example,\n",
                "c(",omxQuotes(model$name),"=",snpData[1],")"))
   modelName <- model$name
   if (length(names(snpData))) modelName <- names(snpData)
-  if (length(rowFilter)) {
+  if (TRUE) {
     noMatch <- is.na(match(names(rowFilter), modelName))
     if (any(noMatch)) {
       stop(paste("Cannot find model associated with rowFilter:",
@@ -155,7 +164,7 @@ prepareComputePlan <- function(model, snpData, out="out.log", ...,
     }
   }, modelName, snpData, snpFileExt, method, stem)
 
-  opt <- list(GD=mxComputeGradientDescent())
+  opt <- list(GD=mxComputeGradientDescent(nudgeZeroStarts=FALSE))
   if (is(model$fitfunction, "MxFitFunctionWLS")) {
 	  opt <- c(opt, SE=mxComputeStandardError())
   } else {
@@ -165,15 +174,105 @@ prepareComputePlan <- function(model, snpData, out="out.log", ...,
 		   HQ=mxComputeHessianQuality())
   }
 
+  # guess which off-diagonal vcov entries we will need
+  offdiag <- c()
+  if (length(model$data$algebra)) {
+    gxe <- sapply(model$data$algebra, function(x) model[[x]]$.dimnames[[2]])
+    outcome <- model$A$free[,'snp']
+    outcome <- names(outcome)[outcome]
+    offdiag <- c(paste0('snp_to_', outcome),
+                 apply(expand.grid(gxe,"_to_",outcome), 1, paste0, collapse=''))
+  }
+
+  if (is.na(header)) header <- is.null(SNP) || SNP[1]==1
+
   onesnp <- c(
     ST=mxComputeSetOriginalStarts(),
     onesnp,
     TC=mxComputeTryCatch(mxComputeSequence(opt)),
-    CK=mxComputeCheckpoint(path=out, standardErrors = FALSE, vcov = TRUE,
-                           vcovFilter=grep('^snp_', names(coef(model)), value=TRUE),
-                           sampleSize = TRUE))
+    CK=mxComputeCheckpoint(path=out, standardErrors = FALSE, vcov = TRUE, header = header,
+                           useVcovFilter=TRUE, vcovFilter=offdiag, sampleSize = TRUE))
 
   mxModel(model, mxComputeLoop(onesnp, i=SNP, startFrom=startFrom))
+}
+
+#' Probe the number of available records
+#'
+#' \lifecycle{maturing} It can be useful to know the number of SNPs in
+#' advance of running a set of analyses.
+#'
+#' @template args-snpData
+#'
+#' @export
+#' @return
+#' Returns a vector of record counts. The vector is named by the containing file path.
+#' @examples
+#' dir <- system.file("extdata", package = "gwsem")
+#' numAvailableRecords(file.path(dir,"example.bgen"))
+numAvailableRecords <- function(snpData) {
+  if (length(names(snpData))) stop("Multiple groups are not supported")
+
+  psd <- processSnpData(snpData)
+  method <- psd$method
+
+  model <- mxModel(name="dummy")
+  job <- mapply(function(snpData1, method1) {
+    mxComputeLoadData('dummy', column=c(), path=snpData1, method=method1)
+  }, snpData, method)
+
+  out <- mxRun(mxModel(model, mxComputeSequence(job)), silent=TRUE)
+
+  sapply(out$compute$steps, function(x) { x$output$rowsAvailable })
+}
+
+#' Build a plan for data analyses
+#'
+#' Long-running jobs are vulnerable to early termination from
+#' maintanance or power outages. We recommend chopping your analyses
+#' into smaller chunks. This also offers the advantage of running jobs
+#' in parallel. This function builds a plan that roughly splits the
+#' whole analysis into equal amounts of work.
+#'
+#' @template args-snpData
+#' @param sliceSize number of SNPs to analyze per job
+#' @export
+#' @return
+#' Returns a data.frame with one job specification per row with the following columns:
+#' \describe{
+#' \item{path}{Path to the genetic data file}
+#' \item{begin}{Starting SNP}
+#' \item{end}{Ending SNP}
+#' \item{count}{Number of SNPs in this job}
+#' \item{slice}{Within data file slice index}
+#' }
+#' @examples
+#' dir <- system.file("extdata", package = "gwsem")
+#' buildAnalysesPlan(file.path(dir,"example.bgen"), 45)
+buildAnalysesPlan <- function(snpData, sliceSize) {
+  name <- names(snpData)
+  numRecs <- numAvailableRecords(unname(snpData))
+
+  slicePerChr <- sapply(numRecs %/% round(sliceSize), max, 1)
+
+  plan <- data.frame(path=rep(snpData, times=slicePerChr),
+                     begin=NA, end=NA)
+  for (tx in 1:length(snpData)) {
+    p1 <- snpData[tx]
+    if (length(name)) plan[plan$path == p1,'name'] <- name[tx]
+    if (slicePerChr[tx] == 1) {
+      plan[plan$path == p1,'begin'] <- 1
+      plan[plan$path == p1,'end'] <- numRecs[tx]
+    } else {
+      breaks <- floor(seq.int(1, numRecs[tx], length.out = slicePerChr[tx]+1))
+      begin <- breaks[-length(breaks)]
+      end <- c(begin[-1]-1, numRecs[tx])
+      plan[plan$path == p1,'begin'] <- begin
+      plan[plan$path == p1,'end'] <- end
+    }
+    plan[plan$path == p1,'count'] <- with(plan[plan$path==p1,], end - begin) + 1L
+    plan[plan$path == p1,'slice'] <- 1:slicePerChr[tx]
+  }
+  plan
 }
 
 #' Run a genome-wide association study (GWAS) using the provided model
@@ -192,6 +291,7 @@ prepareComputePlan <- function(model, snpData, out="out.log", ...,
 #' @template args-dots-barrier
 #' @template args-startfrom
 #' @template args-rowFilter
+#' @template args-header
 #' @export
 #' @return
 #' The results for each SNP are recorded in the specified log file (\code{out}).
@@ -206,12 +306,12 @@ prepareComputePlan <- function(model, snpData, out="out.log", ...,
 #' GWAS(m1, file.path(dir,"example.bgen"),
 #'      file.path(tempdir(),"out.log"))
 GWAS <- function(model, snpData, out="out.log", ..., SNP=NULL, startFrom=1L,
-                 rowFilter=NULL)
+                 rowFilter=NULL, header=NA)
 {
 	# verify model has a continuous 'snp' data column TODO
   if (length(list(...)) > 0) stop("Rejected are any values passed in the '...' argument")
   model <- prepareComputePlan(model, snpData, out=out,
-			      SNP=SNP, startFrom=startFrom, rowFilter=rowFilter)
+			      SNP=SNP, startFrom=startFrom, rowFilter=rowFilter, header=header)
   model <- mxRun(model)
   message(paste("Done. See", omxQuotes(out), "for results"))
   invisible(model)
@@ -323,7 +423,6 @@ setupExogenousCovariates <- function(model, covariates, itemNames)
 # export? TODO
 setupData <- function(phenoData, gxe, customMinMAF, minMAF, fitfun)
 {
-  phenoData <- as.data.frame(phenoData)
   if (customMinMAF && fitfun != "WLS") warning("minMAF is ignored when fitfun != 'WLS'")
   minVar <- calcMinVar(minMAF)
   result <- list()
@@ -348,7 +447,7 @@ addPlaceholderSNP <- function(phenoData) {
 		# We use as.numeric because we currently only support dosages.
 		phenoData$snp <- as.numeric(rbinom(dim(phenoData)[1], 2, .5))
 	}
-	phenoData
+	as.data.frame(phenoData)
 }
 
 endogenousSNPpath <- function(pred, depVar)
@@ -457,9 +556,9 @@ buildItem <- function(phenoData, depVar, covariates=NULL, ..., fitfun = c("WLS",
 
   phenoData <- addPlaceholderSNP(phenoData)
   # Remove extraneous data columns that could prevent WLS cumulants
-  phenoData <- phenoData[,intersect(colnames(phenoData),
-				    c('snp', depVar, covariates, gxe))]
-  fac <- sapply(phenoData[,depVar,drop=FALSE], is.factor)
+  toRemove <- setdiff(colnames(phenoData), c('snp', depVar, covariates, gxe))
+  for (c1 in toRemove) phenoData[[c1]] <- NULL
+  fac <- sapply(phenoData[, depVar, drop=FALSE], is.factor)
 
   if (is.na(exogenous)) {
 	  if (fitfun == 'WLS' && !any(fac)) exogenous <- FALSE
@@ -540,10 +639,10 @@ buildOneFac <- function(phenoData, itemNames, covariates=NULL, ..., fitfun = c("
   if (length(list(...)) > 0) stop("Rejected are any values passed in the '...' argument")
   fitfun <- match.arg(fitfun)
 
+  phenoData <- addPlaceholderSNP(phenoData)
   fac <- sapply(phenoData[,itemNames,drop=FALSE], is.factor)
   if (is.na(exogenous)) exogenous <- defaultExogenous
 
-  phenoData <- addPlaceholderSNP(phenoData)
   manifest <- c(pred, itemNames)
   if (length(gxe)) manifest <- c(manifest, paste0('snp_', gxe))
   depVar   <- c("F")
@@ -617,10 +716,10 @@ buildOneFacRes <- function(phenoData, itemNames, factor = F, res = itemNames, co
   if (length(list(...)) > 0) stop("Rejected are any values passed in the '...' argument")
   fitfun <- match.arg(fitfun)
 
+  phenoData <- addPlaceholderSNP(phenoData)
   fac <- sapply(phenoData[,itemNames,drop=FALSE], is.factor)
   if (is.na(exogenous)) exogenous <- defaultExogenous
 
-  phenoData <- addPlaceholderSNP(phenoData)
   manifest <- c(pred, itemNames)
   if (length(gxe)) manifest <- c(manifest, paste0('snp_', gxe))
   latents   <- c("F")
@@ -694,10 +793,10 @@ buildTwoFac <- function(phenoData, F1itemNames, F2itemNames, covariates = NULL, 
 
   itemNames <- union(F1itemNames, F2itemNames)
 
+  phenoData <- addPlaceholderSNP(phenoData)
   fac <- sapply(phenoData[,itemNames,drop=FALSE], is.factor)
   if (is.na(exogenous)) exogenous <- defaultExogenous
 
-  phenoData <- addPlaceholderSNP(phenoData)
   manifest <- c(pred, itemNames)
   if (length(gxe)) manifest <- c(manifest, paste0('snp_', gxe))
   depVar <- c("F1", "F2")
