@@ -39,7 +39,7 @@ fit functions is trivial and the faster "WLS" option should be
 used, but in some situations the differences can be quite 
 meaningful (such as when data are Missing at Random - MAR).}
 
-\item{minMAF}{The minimum valid minor allele frequency (MAF). Large differences between the variances of two variables in the same model can cause optimization failures that invalidate the model. Further, very small minor allele frequencies are more affected by outliers or influential observations. Accordingly, users can specify the minimum allowable MAF. The default value is MAF > .01. Users may also wish to filter out small MAF alleles from their genotype files in other software programs, such as PLINK.}
+\item{minMAF}{The minimum valid minor allele frequency (MAF). Large differences between the variances of two variables in the same model can cause optimization failures that invalidate the model. Further, very small minor allele frequencies are more affected by outliers or influential observations. Accordingly, users can specify the minimum allowable MAF. The default value is MAF > .01. This option only works when the SNP is entered into the model as an observed variable. If you wish to filter out small MAF alleles for all models, use other software programs such as PLINK.}
 
 \item{gxe}{The observed variable name that will be used to moderate (interact with) 
 the effect of the SNP on the phenotypes. For example, you may want to moderate 
