@@ -11,8 +11,7 @@ prepareComputePlan(
   ...,
   SNP = NULL,
   startFrom = 1L,
-  rowFilter = NULL,
-  header = NA
+  rowFilter = NULL
 )
 }
 \arguments{
@@ -49,8 +48,6 @@ value of the SNP argument is NULL, which will run all snps in the file.}
 \item{startFrom}{a numerical value indicating which SNP is the first SNP to be analyzed. The function will then run every SNP from the specified SNP to the end of the GWAS data file. This is very useful if the analysis stops for some reason (i.e. the cluster is restarted for maintenance) and you can start from the last SNP that you analyzed. Note, you will want to label the output file (specified in out) with a new file name so that you don't overwrite the existing results.}
 
 \item{rowFilter}{optional named list of logical vectors to indicate which rows to skip when loading the SNP column}
-
-\item{header}{whether to write a column header in the first line of output}
 }
 \value{
 The given model with an appropriate compute plan.

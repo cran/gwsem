@@ -1,11 +1,11 @@
-73efc1dbcc5b01f6a1cd51b805501967 *DESCRIPTION
+eaadd158358febbea5010505e2680e03 *DESCRIPTION
 8cc65a2cb6d77d85ef4b749416ae4878 *NAMESPACE
 8cd38b4614c1013ff4ef19bcfff5adb7 *NEWS
-51bb4601d52834e8761a5e26aad2de16 *R/model.R
+d0b914da81c1d45e2715b85151489d0d *R/model.R
 c3d6f1aca8fdb226ee0c130f8af3e490 *R/package.R
-9524c4f52acdfa36c27685b029b7e2e8 *R/report.R
+683e2faf858324916d00e9d9fe992207 *R/report.R
 4fd453ab47d45fe9d74fb48d6d26e835 *README.md
-bd83ed3f2232ff4ddb21937ba4b8378b *build/gwsem.pdf
+b1c4d0d506ae7c19f0f332a039087bf3 *build/gwsem.pdf
 460a06b0b025551a1b019ab25f54bfd8 *inst/extdata/README
 f7087e1fef180630aefacff84f4d6094 *inst/extdata/example.bed
 3120bf0bff5f17b96afc4f6d0f9b745a *inst/extdata/example.bgen
@@ -25,7 +25,7 @@ bc67e8629a9372397d92c23a880b142d *inst/extdata/group2.fam
 2f5113df47a2d21e8467133cd546d651 *inst/extdata/test2.pgen
 fd59d83dcacf27405d7a7599e609ed7e *inst/extdata/test2.psam
 4474211f62f5ea76541941e1d5b4cf25 *inst/extdata/test2.pvar
-a5760d3258f075417d4e5de24450002b *man/GWAS.Rd
+2af29516e30869a275d79e4bf49c4111 *man/GWAS.Rd
 39add8a933a6d8fad4f657a5dcb0a6b6 *man/buildAnalysesPlan.Rd
 de576abc77cde16564fb28399c146c6f *man/buildItem.Rd
 107bdd070d88d3731bca1063a9d6a295 *man/buildOneFac.Rd
@@ -49,7 +49,7 @@ bacbb1592306949794cb1eccce324afd *man/loadResults.Rd
 86a37ede1716a91525295b6c7acde018 *man/loadSuspicious.Rd
 a1398535b62f9c1c2c032f1edbd881e7 *man/numAvailableRecords.Rd
 81c1019d8b165830e1a2cee5988022a1 *man/plot.gwsemResult.Rd
-aaf47f2cdd14328fca1b1cc00219f98c *man/prepareComputePlan.Rd
+a9cc306ff5eb9c4d476132b4722af182 *man/prepareComputePlan.Rd
 204390d6891f0024acad9384f56c5ac6 *man/setupExogenousCovariates.Rd
 bbeba8e83bf8338b3f1df7377e0176da *man/setupThresholds.Rd
 69df40b5bbd0ac2cc2fe3173d118b88e *man/signif.Rd
@@ -125,7 +125,7 @@ aa574edb16a1a541491036006789b09c *tests/testthat.R
 48356dd3195499a3d9f059436e26ab26 *tests/testthat/test-covariate.R
 3f95856eeeaee8fd6db1d8be7710c2b4 *tests/testthat/test-formats.R
 deb260cd4d6e193a5083234dfc22df36 *tests/testthat/test-gxe.R
-f2260a6716cb0f33ccbbade705366ddd *tests/testthat/test-model.R
+feeda88f6a970daf85bfc9a69a06739e *tests/testthat/test-model.R
 4137ffa88005a7e64185c94e29bc6b43 *tests/testthat/test-multigroup.R
 67a8e914f05c86138a7a83842d58a669 *tests/testthat/test-rowFilter.R
 6e1faa4563ca536baca6a9151490f0c1 *tools/bench.R
